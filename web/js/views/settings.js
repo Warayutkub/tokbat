@@ -2,6 +2,7 @@
 import { call } from "../api.js";
 import { h, raw, icon, button, chip, toast, confirmDialog, mascot, busy, debounce } from "../ui.js";
 import { importCsv } from "./importer.js";
+import { checkPacks } from "../garden/packs.js";
 
 export async function render(root, params, ctx) {
   let s = ctx.settings;
@@ -52,6 +53,8 @@ export async function render(root, params, ctx) {
           setting("เหรียญสูงสุดต่อวัน", "ได้ชั่วโมงละ 2 เหรียญ ถึงเพดานแล้วหยุดนับ", h("div.chips", {},
             ...[8, 10, 12].map((hr) => chip(`${hr} ชม. · ${hr * 2}`, s.coin_cap_hours === hr, () => save({ coin_cap_hours: hr }))))),
           sw("ฝนตก", "ชั่วโมงละครั้ง ครั้งละ 15 นาที สุ่มเวลาเอง · ไม่ใช้เน็ต", "rain"),
+          sw("ของใหม่อัตโนมัติ", "เช็กวันละครั้งตอนต่อเน็ต โหลดจากหน้าเว็บของแอป · ไม่ส่งข้อมูลของเราออกไป", "auto_packs"),
+          h("div.chips", {}, button("เช็กของใหม่ตอนนี้", { icon: "download", small: true, onclick: (e) => busy(e.currentTarget, packsNow) })),
           h("p.hint", { style: { fontSize: "12px" } }, "สัตว์และของแต่งไม่ไปอยู่ในรายงานหรือไฟล์ส่งออก"),
         ] : null),
       card("ข้อมูลในเครื่อง", "database",
@@ -74,6 +77,14 @@ export async function render(root, params, ctx) {
   }
 
   async function refresh() { Object.assign(info, await call("data_info")); paint(); }
+
+  async function packsNow() {
+    const r = await checkPacks({ force: true });
+    if (r.offline) return toast("ต่อเน็ตไม่ได้ ลองใหม่ทีหลังนะ", { error: true });
+    if (r.got.length) return; // app.js shows what arrived
+    if (r.failed.length) return toast("มีแพ็กที่ติดตั้งไม่ได้ ข้ามไปก่อน", { error: true });
+    toast("ยังไม่มีของใหม่");
+  }
 
   async function backup() {
     const r = await call("backup");

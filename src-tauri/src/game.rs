@@ -32,12 +32,13 @@ pub fn manifest() -> &'static Value {
     M.get_or_init(|| serde_json::from_str(MANIFEST_JSON).expect("garden manifest"))
 }
 
-pub fn item(id: &str) -> Option<&'static Value> {
-    manifest()["items"].as_array()?.iter().find(|i| i["id"] == id)
+/// `cat` is the catalogue in use: the built-in manifest plus installed packs (see packs::merge).
+pub fn item<'a>(cat: &'a Value, id: &str) -> Option<&'a Value> {
+    cat["items"].as_array()?.iter().find(|i| i["id"] == id)
 }
 
-fn pet_exists(species: &str, color: &str) -> bool {
-    manifest()["pets"].as_array().is_some_and(|a| a.iter().any(|p| p["species"] == species && p["color"] == color))
+fn pet_exists(cat: &Value, species: &str, color: &str) -> bool {
+    cat["pets"].as_array().is_some_and(|a| a.iter().any(|p| p["species"] == species && p["color"] == color))
 }
 
 fn err(code: &str, message: &str) -> Value {
@@ -262,7 +263,7 @@ fn owned_ids(con: &Connection) -> HashSet<String> {
 
 /// Opens one box: rarity by ODDS, then an item of that rarity the player doesn't own yet (no duplicates).
 /// Falls back to the nearest rarity that still has something new, or coins once everything is owned.
-pub fn open_gift(con: &Connection, roll: u32, pick: u64) -> Value {
+pub fn open_gift(con: &Connection, cat: &Value, roll: u32, pick: u64) -> Value {
     if punch(con)["boxes"].as_i64().unwrap_or(0) < 1 {
         return err("no_box", "ยังไม่มีกล่องของขวัญให้เปิด");
     }
@@ -276,7 +277,7 @@ pub fn open_gift(con: &Connection, roll: u32, pick: u64) -> Value {
         }
     }
     let owned = owned_ids(con);
-    let items = manifest()["items"].as_array().cloned().unwrap_or_default();
+    let items = cat["items"].as_array().cloned().unwrap_or_default();
     let order: Vec<&str> = match rarity {
         "special" => vec!["special", "rare", "common"],
         "rare" => vec!["rare", "special", "common"],
@@ -298,14 +299,14 @@ pub fn open_gift(con: &Connection, roll: u32, pick: u64) -> Value {
     json!({"ok": true, "item": null, "coins": GIFT_FALLBACK_COINS, "rarity": "coins", "punch": punch(con)})
 }
 
-pub fn open_gift_random(con: &Connection) -> Value {
+pub fn open_gift_random(con: &Connection, cat: &Value) -> Value {
     let mut rng = rand::rng();
-    open_gift(con, rng.random_range(0..100), rng.random())
+    open_gift(con, cat, rng.random_range(0..100), rng.random())
 }
 
 // ---------------------------------------------------------------- shop, pets, decor
-pub fn buy(con: &Connection, item_id: &str, coins: i64) -> Value {
-    let Some(it) = item(item_id) else { return err("no_item", "ไม่มีของชิ้นนี้ในร้าน") };
+pub fn buy(con: &Connection, cat: &Value, item_id: &str, coins: i64) -> Value {
+    let Some(it) = item(cat, item_id) else { return err("no_item", "ไม่มีของชิ้นนี้ในร้าน") };
     let price = it["price"].as_i64().unwrap_or(0);
     if coins < price {
         return err("coins", &format!("เหรียญไม่พอ ขาดอีก {} เหรียญ", price - coins));
@@ -315,8 +316,8 @@ pub fn buy(con: &Connection, item_id: &str, coins: i64) -> Value {
     json!({"ok": true, "item": it, "price": price, "id": con.last_insert_rowid()})
 }
 
-pub fn adopt(con: &Connection, species: &str, color: &str, name: &str, coins: i64) -> Value {
-    if !pet_exists(species, color) {
+pub fn adopt(con: &Connection, cat: &Value, species: &str, color: &str, name: &str, coins: i64) -> Value {
+    if !pet_exists(cat, species, color) {
         return err("no_pet", "ไม่มีสัตว์สีนี้");
     }
     let name = name.trim();

@@ -14,3 +14,8 @@ node_modules/
 src-tauri/target/
 src-tauri/gen/
 .demo-data/
+tools/garden/out/
+# never commit the pack signing key (it lives in %USERPROFILE%\.tokbat)
+pack-signing.key
+*.key
+web/packs-test/

@@ -1,0 +1,447 @@
+"""Hand-drawn (pencil-line) SVG generator for ตอกบัตร garden: pets (cat, dog, rabbit) and props.
+
+Technique (same as the app's characters): jittered points, Catmull-Rom curves, outlines as open paths that
+overlap their start a little (pen loop), fills as separate shapes slightly misregistered. Line colour #22304A.
+Every part sits in its own <g id="..."> so it can be animated later (legs, tail, ears, eyes, pupils).
+"""
+from __future__ import annotations
+
+import math
+import random
+
+INK = "#22304A"
+LINE = 4.0          # outline weight, as heavy as the app mascot (3.75 on a 150 px character)
+WIDE = 1.2          # explicit detail widths (eyes, whiskers, stripes) scale up with it
+MAX_STROKE = 230    # longer pen strokes are split, so the stretch brush texture never gets smeared
+
+
+class Pen:
+    def __init__(self, seed: int):
+        self.r = random.Random(seed)
+
+    def jit(self, pts, amp=1.0):
+        return [(x + self.r.uniform(-amp, amp), y + self.r.uniform(-amp, amp)) for x, y in pts]
+
+
+def cr(pts, closed=False):
+    """Catmull-Rom through pts → SVG cubic path data."""
+    n = len(pts)
+    if n < 2:
+        return ""
+    P = pts
+    d = f"M{P[0][0]:.1f} {P[0][1]:.1f}"
+    rng = range(n) if closed else range(n - 1)
+    for i in rng:
+        p0 = P[(i - 1) % n] if (closed or i > 0) else P[i]
+        p1 = P[i]
+        p2 = P[(i + 1) % n]
+        p3 = P[(i + 2) % n] if (closed or i + 2 < n) else P[(i + 1) % n]
+        c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
+        c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
+        d += f" C{c1[0]:.1f} {c1[1]:.1f} {c2[0]:.1f} {c2[1]:.1f} {p2[0]:.1f} {p2[1]:.1f}"
+    return d + (" Z" if closed else "")
+
+
+def cr_points(pts, steps=6, spacing=None):
+    """Sample the same Catmull-Rom curve cr() draws (open): `steps` points per segment, or more so points sit ≤ spacing apart."""
+    n = len(pts)
+    out = []
+    for i in range(n - 1):
+        p0 = pts[i - 1] if i > 0 else pts[i]
+        p1, p2 = pts[i], pts[i + 1]
+        p3 = pts[i + 2] if i + 2 < n else pts[i + 1]
+        c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
+        c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
+        n_k = steps if spacing is None else max(steps, math.ceil(math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / spacing))
+        for k in range(n_k):
+            t = k / n_k
+            u = 1 - t
+            out.append((u ** 3 * p1[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t ** 3 * p2[0],
+                        u ** 3 * p1[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t ** 3 * p2[1]))
+    out.append(pts[-1])
+    return out
+
+
+def ellipse(cx, cy, rx, ry, n=14, rot=0.0, start=0.0):
+    out = []
+    for i in range(n):
+        a = start + 2 * math.pi * i / n
+        x, y = rx * math.cos(a), ry * math.sin(a)
+        c, s = math.cos(rot), math.sin(rot)
+        out.append((cx + x * c - y * s, cy + x * s + y * c))
+    return out
+
+
+def rrect(x, y, w, h, r, per_edge=3):
+    """Rounded rectangle as points, with extra points on straight edges so curves stay straight."""
+    pts = []
+    corners = [(x + w - r, y + r, -math.pi / 2), (x + w - r, y + h - r, 0), (x + r, y + h - r, math.pi / 2), (x + r, y + r, math.pi)]
+    for (cx, cy, a0) in corners:
+        for k in range(3):
+            a = a0 + (math.pi / 2) * k / 2
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+        # straight edge to next corner
+        nxt = corners[(corners.index((cx, cy, a0)) + 1) % 4]
+        ex, ey = cx + r * math.cos(a0 + math.pi / 2), cy + r * math.sin(a0 + math.pi / 2)
+        nx, ny = nxt[0] + r * math.cos(nxt[2]), nxt[1] + r * math.sin(nxt[2])
+        for k in range(1, per_edge):
+            t = k / per_edge
+            pts.append((ex + (nx - ex) * t, ey + (ny - ey) * t))
+    return pts
+
+
+class Art:
+    """Collects layers for one drawing."""
+
+    def __init__(self, seed=1, line=LINE, k=WIDE):
+        self.pen = Pen(seed)
+        self.parts: list[str] = []
+        self.line = line
+        self.k = k  # multiplier for explicit widths (1.0 = widths are already in final units)
+
+    def shape(self, pts, fill, jit=0.9, misreg=1.0, outline=True, wide=None, opacity=None, ink=INK):
+        """Filled shape + its pen outline (open path overlapping its start)."""
+        p = self.pen.jit(pts, jit)
+        out = []
+        if fill:
+            dx, dy = self.pen.r.uniform(-misreg, misreg), self.pen.r.uniform(-misreg, misreg)
+            f = [(x + dx, y + dy) for x, y in p]
+            op = f' fill-opacity="{opacity}"' if opacity is not None else ""
+            out.append(f'<path id="fill" d="{cr(f, closed=True)}" fill="{fill}"{op}/>')
+        if outline:
+            # like the mascot: start anywhere, go all the way round, then run on a little past the start
+            k = self.pen.r.randrange(len(p))
+            q = p[k:] + p[:k]
+            a_, b_ = q[0], q[1]
+            end = (a_[0] + (b_[0] - a_[0]) * 0.3 + self.pen.r.uniform(-1, 1), a_[1] + (b_[1] - a_[1]) * 0.3 + self.pen.r.uniform(-1, 1))
+            out.append(self.stroke(q + [a_, end], wide * self.k if wide else self.line, ink))
+        return "".join(out)
+
+    def line_(self, pts, width=None, color=INK, jit=0.6):
+        p = self.pen.jit(pts, jit)
+        return self.stroke(p, width * self.k if width else self.line, color)
+
+    def stroke(self, pts, width, color):
+        """One pen stroke through pts; long ones become several overlapping strokes (like re-placing the pencil)."""
+        kind = "ink" if color == INK else "line"
+        attrs = f'stroke="{color}" stroke-width="{width:.2f}" stroke-linecap="round" stroke-linejoin="round" fill="none"'
+        dense = cr_points(pts, 6, spacing=3.5)
+        seg = [math.hypot(dense[i + 1][0] - dense[i][0], dense[i + 1][1] - dense[i][1]) for i in range(len(dense) - 1)]
+        total = sum(seg)
+        if total <= MAX_STROKE:
+            return f'<path id="{kind}" d="{cr(pts)}" {attrs}/>'
+        k = math.ceil(total / (MAX_STROKE * 0.85))
+        piece = total / k
+        out, start, acc, cut = [], 0, 0.0, piece
+        for i, d in enumerate(seg):
+            acc += d
+            if acc >= cut or i == len(seg) - 1:
+                end = i + 1
+                # overlap a few px into the next piece, and start a hair off the line
+                ext = min(len(dense) - 1, end + 2)
+                chunk = dense[start:ext + 1]
+                jx, jy = self.pen.r.uniform(-0.8, 0.8), self.pen.r.uniform(-0.8, 0.8)
+                chunk = [(chunk[0][0] + jx, chunk[0][1] + jy)] + chunk[1:]
+                d_ = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in chunk)
+                out.append(f'<path id="{kind}" d="{d_}" {attrs}/>')
+                start, cut = end, cut + piece
+        return "".join(out)
+
+    def tube(self, pts, fill, width, jit=0.6, tip=1.0):
+        """A limb/tail as a CLOSED shape (fill + pen outline) around a centreline, round at both ends.
+
+        Brushes only look right on outlines, so limbs are real shapes, not a fat stroke with a fill stroke on top.
+        `tip` scales the radius at the far end (tails taper or swell a little)."""
+        c = cr_points(self.pen.jit(pts, jit), 6)
+        r0 = width / 2 + self.line / 2
+        n = len(c)
+        left, right = [], []
+        for i, (x, y) in enumerate(c):
+            ax, ay = c[max(i - 1, 0)]
+            bx, by = c[min(i + 1, n - 1)]
+            dx, dy = bx - ax, by - ay
+            ln = math.hypot(dx, dy) or 1.0
+            nx, ny = -dy / ln, dx / ln
+            r = r0 * (1 + (tip - 1) * i / (n - 1))
+            left.append((x + nx * r, y + ny * r))
+            right.append((x - nx * r, y - ny * r))
+        def cap(cx, cy, r, ang):
+            # sweep from one side, round the outer end, to the other side
+            return [(cx + r * math.cos(ang - math.pi * k / 4), cy + r * math.sin(ang - math.pi * k / 4)) for k in (1, 2, 3)]
+        ex, ey = c[-1]
+        sx, sy = c[0]
+        a_end = math.atan2(left[-1][1] - ey, left[-1][0] - ex)
+        a_start = math.atan2(right[0][1] - sy, right[0][0] - sx)
+        ring = left[::2] + [left[-1]] + cap(ex, ey, r0 * tip, a_end) + right[::-1][::2] + [right[0]] + cap(sx, sy, r0, a_start)
+        # drop points that sit almost on top of each other (they make kinks in the curve)
+        clean = [ring[0]]
+        for p in ring[1:]:
+            if math.hypot(p[0] - clean[-1][0], p[1] - clean[-1][1]) > 2.0:
+                clean.append(p)
+        return self.shape(clean, fill, jit=0.35, misreg=0.6)
+
+    def dot(self, cx, cy, r, fill):
+        return f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="{fill}"/>'
+
+    def group(self, gid, *items, transform=None):
+        t = f' transform="{transform}"' if transform else ""
+        return f'<g id="{gid}"{t}>' + "".join(items) + "</g>"
+
+
+def svg(w, h, body, name):
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" fill="none"><g id="{name}">{body}</g></svg>'
+
+
+# ------------------------------------------------------------------ face helpers
+def eyes(a: Art, lx, rx, y, rw=8.5, rh=10.0, look=(1.6, 0.8), pupil=5.2):
+    """Far (left) eye first, then near (right) eye — pupils stay ≥2 px inside their own eye."""
+    parts = []
+    for gid, ex in (("eye-l", lx), ("eye-r", rx)):
+        white = a.shape(ellipse(ex, y, rw, rh, 12), "#FFFFFF", jit=0.5, misreg=0.4, wide=2.6)
+        px, py = ex + look[0], y + look[1]
+        pup = a.dot(px, py, pupil, INK) + a.dot(px + 1.7, py - 2.0, 1.7, "#FFFFFF")
+        parts.append(a.group(gid, white, a.group("pupil", pup)))
+    return "".join(parts)
+
+
+def cheeks(a: Art, pts, r=(5.5, 3.6)):
+    return a.group("cheeks", *[f'<ellipse cx="{x:.1f}" cy="{y:.1f}" rx="{r[0]}" ry="{r[1]}" fill="#FFA8B8" fill-opacity="0.85"/>' for x, y in pts])
+
+
+def shadow(cx, cy, rx, ry=5):
+    return f'<ellipse id="shadow" cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="{INK}" fill-opacity="0.12"/>'
+
+
+def darker(hex_, k=0.82):
+    h = hex_.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return "#%02X%02X%02X" % (int(r * k), int(g * k), int(b * k))
+
+
+# ------------------------------------------------------------------ pets — drawn exactly like the app mascot
+# Same rules as ชอล์ก (wt/chars2.mjs): 200-unit box, body outline 5, stick legs 7 (navy, one stroke each),
+# huge white eyes (outline 3.5) with plain navy pupils, solid pink cheeks, one-stroke mouth, dust dots at the feet,
+# flat fills, no shading, no extra detail lines. Facing right; body side-on, face to the viewer.
+PW, PH = 200, 180
+
+
+def pet_art(seed):
+    return Art(seed, line=5.0, k=1.0)
+
+
+def sticks(a, lines, w=7.0):
+    return "".join(a.group(gid, a.line_(pts, width=w, jit=0.5)) for gid, pts in lines)
+
+
+def big_eyes(a, l, r, look=(2.5, 1.5), pupil=5.8):
+    """l, r = (cx, cy, radius). Eyes never touch (gap between them), pupils stay inside."""
+    out = []
+    for gid, (cx, cy, rad) in (("eye-l", l), ("eye-r", r)):
+        white = a.shape(ellipse(cx, cy, rad, rad * 1.06, 10), "#FFFFFF", jit=0.45, misreg=0, wide=3.5)
+        pup = a.dot(cx + look[0], cy + look[1], pupil, INK)
+        out.append(a.group(gid, white, a.group("pupil", pup)))
+    return "".join(out)
+
+
+def pink(a, pts, r=(6.5, 4.2)):
+    return a.group("cheeks", *[a.shape(ellipse(x, y, r[0], r[1], 8), "#FFA8B8", jit=0.3, misreg=0, outline=False) for x, y in pts])
+
+
+def dust(pts, op=0.55):
+    return '<g id="dust">' + "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="{INK}" fill-opacity="{op}"/>' for x, y, r in pts) + "</g>"
+
+
+def cat(colors, seed=11):
+    """colors: body, stripe (or None), ear (inner)."""
+    a = pet_art(seed)
+    B, S = colors["body"], colors.get("stripe")
+    legs = sticks(a, [("leg-back-far", [(70, 132), (68, 160)]), ("leg-back-near", [(86, 134), (88, 162)]),
+                      ("leg-front-far", [(118, 134), (116, 161)]), ("leg-front-near", [(134, 132), (137, 160)])])
+    tail = a.group("tail", a.line_([(58, 120), (42, 108), (36, 88), (42, 72), (53, 70)], width=6.5, jit=0.5))
+    torso = [a.shape([(60, 110), (80, 101), (108, 100), (132, 104), (146, 116), (145, 134), (128, 143), (98, 145), (68, 143), (54, 130)], B, misreg=0)]
+    if S:
+        torso += [a.line_([(x, 103), (x + 3, 116)], width=4, color=S, jit=0.4) for x in (80, 94, 108)]
+    inner = colors.get("ear", "#FFA8B8")
+    ears = [a.group("ear-l", a.shape([(104, 66), (106, 30), (131, 52)], B, jit=0.6, misreg=0),
+                    a.shape([(110, 58), (111, 41), (124, 53)], inner, jit=0.3, misreg=0, outline=False)),
+            a.group("ear-r", a.shape([(146, 50), (167, 28), (172, 66)], B, jit=0.6, misreg=0),
+                    a.shape([(152, 50), (164, 38), (166, 58)], inner, jit=0.3, misreg=0, outline=False))]
+    head = [a.shape([(102, 72), (112, 52), (138, 46), (164, 50), (176, 70), (174, 94), (160, 108), (138, 112), (114, 108), (101, 92)], B, misreg=0)]
+    if S:
+        head += [a.line_(pts, width=3.6, color=S, jit=0.3) for pts in ([(129, 49), (131, 59)], [(140, 48), (140, 58)], [(151, 49), (149, 59)])]
+    face = [big_eyes(a, (124, 80, 11.8), (152, 78, 12.2), pupil=5.4), pink(a, [(110, 97), (166, 95)]),
+            a.dot(139, 91, 2.6, INK),
+            a.group("mouth", a.line_([(131, 96), (135, 100), (139, 96.5), (143, 100), (147, 96)], width=3.2, jit=0.25))]
+    body = legs + tail + a.group("body", *torso) + a.group("head", *ears, *head, a.group("face", *face))
+    return svg(PW, PH, body + dust([(60, 166, 2.4), (72, 170, 1.6), (128, 168, 2.2), (144, 164, 1.4), (150, 170, 1.8)]), "Pet/cat")
+
+
+def dog(colors, seed=21):
+    """colors: body, ear, spot (or None)."""
+    a = pet_art(seed)
+    B, S = colors["body"], colors.get("spot")
+    E = colors.get("ear", darker(B, 0.8))
+    legs = sticks(a, [("leg-back-far", [(70, 134), (67, 161)]), ("leg-back-near", [(86, 136), (88, 163)]),
+                      ("leg-front-far", [(118, 136), (116, 162)]), ("leg-front-near", [(134, 134), (137, 161)])])
+    tail = a.group("tail", a.line_([(58, 116), (46, 104), (40, 88), (42, 80)], width=6.5, jit=0.5))
+    torso = [a.shape([(60, 112), (82, 102), (110, 101), (134, 106), (148, 118), (147, 136), (128, 146), (98, 148), (68, 146), (54, 132)], B, misreg=0)]
+    if S:
+        torso.append(a.shape(ellipse(86, 120, 15, 11, 9), S, jit=0.6, misreg=0, outline=False))
+    ear_l = a.group("ear-l", a.shape(ellipse(104, 84, 12, 23, 10, rot=0.38), E, jit=0.5, misreg=0))
+    ear_r = a.group("ear-r", a.shape(ellipse(172, 82, 12, 23, 10, rot=-0.38), E, jit=0.5, misreg=0))
+    head = [a.shape([(104, 74), (114, 54), (138, 47), (162, 52), (174, 72), (172, 96), (158, 110), (138, 114), (116, 110), (103, 94)], B, misreg=0)]
+    if S:
+        head.append(a.shape(ellipse(154, 72, 15, 14, 9), S, jit=0.6, misreg=0, outline=False))
+    face = [big_eyes(a, (125, 79, 11.4), (152, 77, 11.8), pupil=5.3), pink(a, [(112, 98), (165, 96)]),
+            a.shape(ellipse(138.5, 93, 6, 4.4, 8), INK, jit=0.3, misreg=0, outline=False),
+            a.group("mouth", a.shape([(131, 99), (146, 99), (144, 107), (138.5, 110.5), (133, 107)], INK, jit=0.3, misreg=0, outline=False),
+                    a.group("tongue", a.shape(ellipse(138.5, 106.5, 4.2, 2.6, 8), "#FF8F9E", jit=0.2, misreg=0, outline=False)))]
+    body = legs + tail + a.group("body", *torso) + a.group("head", ear_l, ear_r, *head, a.group("face", *face))
+    return svg(PW, PH, body + dust([(60, 167, 2.4), (72, 171, 1.6), (128, 169, 2.2), (144, 165, 1.4), (150, 171, 1.8)]), "Pet/dog")
+
+
+def rabbit(colors, seed=31):
+    """colors: body, ear (inner), tail."""
+    a = pet_art(seed)
+    B = colors["body"]
+    legs = sticks(a, [("leg-back-far", [(78, 140), (76, 158)]), ("leg-back-near", [(94, 143), (96, 161)]),
+                      ("leg-front-far", [(118, 142), (116, 159)]), ("leg-front-near", [(132, 139), (134, 157)])])
+    tail = a.group("tail", a.shape(ellipse(58, 124, 11, 10, 9), colors.get("tail", B), jit=0.6, misreg=0))
+    torso = a.group("body", a.shape([(64, 116), (84, 104), (112, 104), (134, 114), (142, 130), (128, 146), (94, 149), (68, 145), (57, 131)], B, misreg=0))
+    ears = []
+    for gid, cx, cy, rot in (("ear-l", 124, 38, -0.16), ("ear-r", 152, 36, 0.2)):
+        ears.append(a.group(gid, a.shape(ellipse(cx, cy, 10.5, 28, 12, rot=rot), B, jit=0.5, misreg=0),
+                            a.shape(ellipse(cx + 0.5, cy + 4, 4.6, 19, 10, rot=rot), colors.get("ear", "#FFA8B8"), jit=0.3, misreg=0, outline=False)))
+    head = a.shape([(106, 82), (114, 64), (138, 57), (160, 62), (171, 80), (169, 100), (156, 112), (138, 115), (118, 111), (106, 98)], B, misreg=0)
+    face = [big_eyes(a, (126, 86, 10.8), (151, 84, 11.2), pupil=5.0), pink(a, [(114, 101), (163, 99)], r=(6, 3.8)),
+            a.shape(ellipse(138.5, 97, 3.4, 2.6, 8), "#FF8F9E", jit=0.2, misreg=0, outline=False),
+            a.group("mouth", a.line_([(132, 101), (135.5, 104.5), (138.5, 101.5), (141.5, 104.5), (145, 101)], width=3.0, jit=0.2))]
+    body = legs + tail + torso + a.group("head", *ears, head, a.group("face", *face))
+    return svg(PW, PH, body + dust([(68, 164, 2.4), (80, 168, 1.6), (124, 166, 2.2), (140, 162, 1.4), (146, 168, 1.8)]), "Pet/rabbit")
+
+
+# colour sets (natural colours; the app UI palette does not apply inside the garden)
+CATS = {
+    "ส้มลาย": {"body": "#F4A75B", "stripe": "#D27A2E", "belly": "#FFF3E2"},
+    "ขาว": {"body": "#FFFFFF", "belly": None, "ear": "#FFC2CE"},
+    "ดำ": {"body": "#474D60", "ear": "#FF9DB0"},
+    "เทา": {"body": "#B9C0CC", "stripe": "#8E97A6", "belly": "#F4F6F9"},
+}
+DOGS = {
+    "ทอง": {"body": "#E9BC72", "ear": "#C98E45", "muzzle": "#FFF3DE"},
+    "น้ำตาล": {"body": "#A8703F", "ear": "#7E4F28", "muzzle": "#F2D3AE"},
+    "ขาวจุด": {"body": "#FFFFFF", "spot": "#B07A47", "ear": "#B07A47", "muzzle": "#FFFFFF"},
+    "ดำ": {"body": "#474D60", "ear": "#6A7186"},
+}
+RABBITS = {
+    "ขาว": {"body": "#FFFFFF", "belly": "#FFFFFF", "tail": "#FFFFFF"},
+    "เทา": {"body": "#C3C8D1", "belly": "#F3F4F7"},
+    "น้ำตาล": {"body": "#C69568", "belly": "#F6E6D2"},
+    "ครีม": {"body": "#F6DFB8", "belly": "#FFF8EC"},
+}
+
+
+# ------------------------------------------------------------------ props (natural colours)
+G = {"grass": "#A8DA84", "grass2": "#B9E296", "tuft": "#5E9E45", "leaf": "#6DB34F", "leaf2": "#4F9238",
+     "trunk": "#9A6A42", "wood": "#E3B577", "wood2": "#C9955A", "roof": "#E46F5A", "wall": "#F6DEB0",
+     "door": "#7A543A", "soil": "#A0703F", "soil2": "#7E5530", "stone": "#C9CED6", "sky": "#CDEBFF"}
+
+
+def blob(cx, cy, r, bumps=7, k=0.18, seed=1):
+    """A cloud/canopy outline: circle with soft bumps."""
+    rnd = random.Random(seed)
+    pts = []
+    n = bumps * 4
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        bump = 1 + k * (0.5 + 0.5 * math.cos(a * bumps)) + rnd.uniform(-0.03, 0.03)
+        pts.append((cx + r * bump * math.cos(a), cy + r * 0.86 * bump * math.sin(a)))
+    return pts
+
+
+def tree(seed=41, w=230):
+    a = Art(seed)
+    trunk = a.shape([(102, 250), (106, 200), (108, 150), (104, 128), (126, 128), (122, 150), (124, 200), (130, 250)], G["trunk"])
+    roots = a.line_([(98, 251), (132, 251)], width=3.0)
+    canopy = a.shape(blob(115, 95, 82, bumps=7, seed=seed), G["leaf"], jit=1.1)
+    shade = "".join(f'<path d="{cr(a.pen.jit(ellipse(x, y, 16, 10, 8), 0.8), True)}" fill="{G["leaf2"]}" fill-opacity="0.7"/>' for x, y in ((85, 120), (140, 112), (112, 70), (70, 80), (156, 74)))
+    return svg(w, 262, a.group("trunk", trunk, roots) + a.group("canopy", canopy, shade), "Prop/tree")
+
+
+def bush(seed=51):
+    a = Art(seed)
+    body = a.shape(blob(60, 44, 40, bumps=5, k=0.22, seed=seed), G["leaf"], jit=1.0)
+    berries = "".join(a.dot(x, y, 3.6, "#E8555C") for x, y in ((40, 36), (66, 28), (82, 48), (52, 54)))
+    base = a.line_([(26, 74), (94, 74)], width=2.6, color=G["leaf2"])
+    return svg(120, 82, a.group("bush", body, berries, base), "Prop/bush")
+
+
+def pet_house(seed=61):
+    a = Art(seed)
+    walls = a.shape(rrect(22, 62, 136, 86, 6, per_edge=5), G["wall"])
+    planks = "".join(a.line_([(26, y), (154, y)], width=2.0, color=G["wood2"]) for y in (84, 106, 128))
+    door = a.shape([(68, 148), (68, 104), (74, 92), (90, 86), (106, 92), (112, 104), (112, 148)], G["door"])
+    roof = a.shape([(8, 70), (90, 14), (172, 70), (164, 78), (90, 26), (16, 78)], G["roof"])
+    plate = a.shape(rrect(70, 56, 40, 16, 5, per_edge=3), "#FFFFFF", jit=0.4, wide=2.4)
+    return svg(180, 156, a.group("house", walls, planks, door, roof, plate), "Prop/pet-house")
+
+
+def fence(seed=71, posts=4):
+    a = Art(seed)
+    span = 64
+    rails = a.shape(rrect(8, 30, span * (posts - 1) + 22, 12, 5, per_edge=6), G["wood"], jit=0.7) + \
+        a.shape(rrect(8, 56, span * (posts - 1) + 22, 12, 5, per_edge=6), G["wood"], jit=0.7)
+    ps = "".join(a.shape([(10 + i * span, 82), (10 + i * span, 18), (19 + i * span, 8), (28 + i * span, 18), (28 + i * span, 82)], G["wood"], jit=0.6)
+                 for i in range(posts))
+    return svg(span * (posts - 1) + 40, 90, a.group("fence", rails, ps), "Prop/fence")
+
+
+def farm_plot(seed=81, crop="carrot"):
+    a = Art(seed)
+    soil = a.shape(rrect(8, 30, 214, 78, 16, per_edge=7), G["soil"])
+    rows = "".join(a.line_([(26, y), (204, y)], width=3.0, color=G["soil2"]) for y in (52, 76, 98))
+    plants = []
+    for row, y in enumerate((48, 72, 94)):
+        for i in range(5):
+            x = 40 + i * 37 + (row % 2) * 8
+            if crop == "carrot":
+                plants.append(a.shape([(x - 5, y + 2), (x + 5, y + 2), (x, y + 12)], "#F08A3C", jit=0.4, misreg=0.4, wide=2.2))
+                plants.append(a.line_([(x, y), (x - 6, y - 12)], width=2.6, color=G["leaf2"]))
+                plants.append(a.line_([(x, y), (x + 1, y - 14)], width=2.6, color=G["leaf2"]))
+                plants.append(a.line_([(x, y), (x + 7, y - 11)], width=2.6, color=G["leaf2"]))
+            else:
+                plants.append(a.shape(ellipse(x, y - 2, 9, 7, 10), "#8FD16B", jit=0.6, wide=2.4))
+    return svg(232, 116, a.group("farm-plot", soil, rows, *plants), "Prop/farm-plot")
+
+
+def flower(color="#FFFFFF", seed=91):
+    a = Art(seed, line=2.4)
+    stem = a.line_([(16, 40), (16, 22)], width=2.6, color=G["leaf2"])
+    leaf = a.shape(ellipse(22, 32, 6, 3, 8, rot=-0.5), G["leaf"], jit=0.3, wide=2.0)
+    petals = "".join(a.shape(ellipse(16 + 6 * math.cos(t), 14 + 6 * math.sin(t), 5, 4.2, 8, rot=t), color, jit=0.3, misreg=0.3, wide=2.0)
+                     for t in [i * 2 * math.pi / 5 for i in range(5)])
+    center = a.dot(16, 14, 3.6, "#FFD54A")
+    return svg(32, 44, a.group("flower", stem, leaf, petals, center), "Prop/flower")
+
+
+def tuft(seed=101, w=38):
+    a = Art(seed, line=2.6)
+    blades = "".join(a.line_([(x, 20), (x + d, 4 + abs(d))], width=2.6, color=G["tuft"]) for x, d in ((8, -4), (14, -1), (19, 3), (25, 1), (30, 5)))
+    return svg(w, 24, a.group("tuft", blades), "Prop/grass-tuft")
+
+
+def stone(seed=111):
+    a = Art(seed, line=2.6)
+    return svg(40, 26, a.group("stone", a.shape(ellipse(20, 14, 16, 9, 10), G["stone"], jit=0.8)), "Prop/stone")
+
+
+def cloud(seed=121, fill="#FFFFFF", ink="#8DB4DC"):
+    """Puffy top (overlapping circles), gently flat bottom."""
+    a = Art(seed, line=2.6)
+    rnd = random.Random(seed)
+    pts = [(18, 62), (12, 50), (22, 38)]
+    for cx, cy, r in ((44, 34, 20), (78, 22, 26), (114, 28, 22), (144, 42, 16)):
+        cx += rnd.uniform(-3, 3)
+        pts += [(cx + r * math.cos(t), cy + r * math.sin(t)) for t in (math.pi * 1.15, math.pi * 1.5, math.pi * 1.85)]
+    pts += [(160, 56), (150, 66), (110, 68), (70, 69), (34, 67)]
+    return svg(170, 80, a.group("cloud", a.shape(pts, fill, jit=0.8, ink=ink)), "Sky/cloud")

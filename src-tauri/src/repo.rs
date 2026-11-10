@@ -28,7 +28,9 @@ pub fn default_settings() -> Map<String, Value> {
         "start_page": "garden",
         "coin_cap_hours": 8,
         "rain": true,
-        "game_started": ""
+        "game_started": "",
+        "auto_packs": true,
+        "shop_seen_at": ""
     });
     v.as_object().unwrap().clone()
 }

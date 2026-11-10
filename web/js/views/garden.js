@@ -70,7 +70,8 @@ export async function render(root, params, ctx) {
       h("div.g-hud__bottom", {}, zoomControl(),
         h("div", { style: { display: "flex", gap: "10px" } },
           h("button.pill.pill--btn.sketch", { type: "button", onclick: decorate }, raw(ICON_BRUSH), "ตกแต่ง"),
-          h("button.pill.pill--btn.sketch.is-on", { type: "button", onclick: () => { location.hash = "#/shop"; } }, raw(ICON_BAG), "ร้านค้า"))));
+          h("button.pill.pill--btn.sketch.is-on", { type: "button", onclick: () => { location.hash = "#/shop"; } }, raw(ICON_BAG), "ร้านค้า",
+          hasNew() ? h("span.count", { title: "มีของใหม่" }, "ใหม่") : null))));
     if (panel) paintPanel();
     welcome?.remove();
     welcome = null;
@@ -83,6 +84,11 @@ export async function render(root, params, ctx) {
         h("p.hint", { style: { fontSize: "12px" } }, "ปิดเกมได้ในตั้งค่า · สัตว์และของแต่งไม่ไปอยู่ในรายงาน"));
       card.append(welcome);
     }
+  }
+
+  function hasNew() {
+    const seen = ctx.settings.shop_seen_at || "";
+    return m.items.some((i) => i.new && i.installed_at > seen);
   }
 
   function zoomControl() {

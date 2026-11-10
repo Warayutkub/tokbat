@@ -9,6 +9,7 @@ import * as welcome from "./views/welcome.js";
 import * as garden from "./views/garden.js";
 import * as shop from "./views/shop.js";
 import * as adopt from "./views/adopt.js";
+import { checkPacks } from "./garden/packs.js";
 
 const VIEWS = { log, history, report, settings, welcome, garden, shop, adopt };
 const TAB_OF = { shop: "garden", adopt: "garden" };
@@ -57,6 +58,11 @@ async function boot() {
     if (e.detail.bump) { pill.classList.remove("is-bump"); void pill.offsetWidth; pill.classList.add("is-bump"); }
   });
   if (b.settings.game_enabled !== false) call("garden_state").then((g) => garden.setCoins(g.balance)).catch(() => {});
+  window.addEventListener("garden:packs", (e) => {
+    const n = e.detail.reduce((a, p) => a + p.items + p.pets, 0);
+    toast(`ของใหม่มาแล้ว ${n} อย่าง · ${e.detail.map((p) => p.title).join(", ")}`, { action: "ไปร้านค้า", onAction: () => { location.hash = "#/shop"; } });
+  });
+  if (b.settings.game_enabled !== false && b.settings.auto_packs !== false) setTimeout(() => checkPacks().catch(() => {}), 4000);
   hydrateMascots();
   if (!location.hash && b.count === 0 && !b.settings.first_run_done) location.hash = "#/welcome";
   window.addEventListener("hashchange", show);

@@ -26,6 +26,9 @@ encoding_rs = "0.8"
 dirs = "7"
 tiny_http = "0.12"
 rand = "0.9"
+ed25519-dalek = "2"
+sha2 = "0.10"
+base64 = "0.22"
 
 [profile.release]
 codegen-units = 1

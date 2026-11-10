@@ -1,27 +1,37 @@
-// The garden's art pack: manifest + hand-drawn SVG files (exported from Figma with the pencil brush expanded).
-// Every drawing is fetched once and cloned for each use; group classes (leg-*, tail, eye-l …) let CSS move the parts.
+// The garden's art: the catalogue (built-in manifest + installed packs, from Rust) and the hand-drawn SVGs
+// (exported from Figma with the pencil brush expanded). Built-in drawings are files next to the page; pack drawings
+// come through the API. Each is fetched once and cloned per use; group classes (leg-*, tail, eye-l …) let CSS move parts.
+import { call } from "../api.js";
+
 const BASE = "garden/base/";
 const texts = new Map();
 let manifestP = null;
 
 export function manifest() {
   if (!manifestP) {
-    manifestP = fetch(BASE + "manifest.json").then((r) => r.json()).then((m) => {
+    manifestP = call("garden_catalog").then((m) => {
       m.byId = Object.fromEntries(m.items.map((i) => [i.id, i]));
       return m;
     });
   }
   return manifestP;
 }
+/** After a pack arrives: read the catalogue again next time. */
+export function resetCatalog() { manifestP = null; }
 
 function text(path) {
   if (!texts.has(path)) texts.set(path, fetch(BASE + path).then((r) => r.text()));
   return texts.get(path);
 }
+function packText(pack, file) {
+  const key = `pack:${pack}/${file}`;
+  if (!texts.has(key)) texts.set(key, call("pack_asset", pack, file));
+  return texts.get(key);
+}
 
-async function svg(path) {
+async function fromText(src) {
   const t = document.createElement("template");
-  t.innerHTML = (await text(path)).trim();
+  t.innerHTML = (await src).trim();
   const el = t.content.firstElementChild;
   el.removeAttribute("width");
   el.removeAttribute("height");
@@ -30,9 +40,14 @@ async function svg(path) {
   return el;
 }
 
-export const itemSvg = (id) => svg(`props/${id}.svg`);
-export const petSvg = (species, color) => svg(`pets/${species}-${color}.svg`);
-export const bgSvg = (mode) => svg(`bg/${mode}.svg`);
+export async function itemSvg(id) {
+  const d = (await manifest()).byId[id];
+  return fromText(d?.pack ? packText(d.pack, d.file) : text(`props/${id}.svg`));
+}
+export async function petSvg(species, color) {
+  const p = (await manifest()).pets.find((x) => x.species === species && x.color === color);
+  return fromText(p?.pack ? packText(p.pack, p.file) : text(`pets/${species}-${color}.svg`));
+}
 
 /** Warm the cache so the first paint of the garden doesn't pop in piece by piece. */
 export function preload(m, ids = [], pets = []) {

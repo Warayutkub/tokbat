@@ -210,7 +210,7 @@ fn decor_places_and_stores_pieces() {
 #[test]
 fn gift_boxes_need_ten_claims_and_never_repeat_an_item() {
     let con = mem();
-    assert_eq!(game::open_gift(&con, 0, 0)["error"]["code"], "no_box");
+    assert_eq!(game::open_gift(&con, game::manifest(), 0, 0)["error"]["code"], "no_box");
     let total = game::manifest()["items"].as_array().unwrap().len();
     for i in 0..(total + 3) * 10 {
         con.execute("INSERT INTO quest_claims (period, quest_id, coins) VALUES (?1, 'x', 1)", params![format!("p{i}")]).unwrap();
@@ -218,12 +218,12 @@ fn gift_boxes_need_ten_claims_and_never_repeat_an_item() {
     assert_eq!(game::punch(&con)["count"], 10, "a full card stays full until opened");
     let mut seen = std::collections::HashSet::new();
     for k in 0..total {
-        let r = game::open_gift(&con, (k as u32 * 37) % 100, k as u64 * 7919);
+        let r = game::open_gift(&con, game::manifest(), (k as u32 * 37) % 100, k as u64 * 7919);
         let id = r["item"]["id"].as_str().unwrap().to_string();
         assert!(seen.insert(id.clone()), "duplicate {id}");
     }
     // everything owned now: coins instead
-    let r = game::open_gift(&con, 50, 1);
+    let r = game::open_gift(&con, game::manifest(), 50, 1);
     assert_eq!(r["coins"], game::GIFT_FALLBACK_COINS);
     assert!(r["item"].is_null());
 }
@@ -234,9 +234,9 @@ fn gift_odds_pick_the_rarity_by_roll() {
     for i in 0..30 {
         con.execute("INSERT INTO quest_claims (period, quest_id, coins) VALUES (?1, 'x', 1)", params![format!("p{i}")]).unwrap();
     }
-    assert_eq!(game::open_gift(&con, 10, 0)["rarity"], "common");
-    assert_eq!(game::open_gift(&con, 80, 0)["rarity"], "rare");
-    assert_eq!(game::open_gift(&con, 97, 0)["rarity"], "special");
+    assert_eq!(game::open_gift(&con, game::manifest(), 10, 0)["rarity"], "common");
+    assert_eq!(game::open_gift(&con, game::manifest(), 80, 0)["rarity"], "rare");
+    assert_eq!(game::open_gift(&con, game::manifest(), 97, 0)["rarity"], "special");
 }
 
 #[test]

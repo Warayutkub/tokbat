@@ -3,15 +3,20 @@ import { call } from "../api.js";
 import { h, raw, icon, button, chip, toast } from "../ui.js";
 import { manifest, itemSvg, coinSvg, CATS, RARITY } from "../garden/art.js";
 import { setCoins } from "./garden.js";
+import { stamp } from "../garden/packs.js";
 
 const SPECIES_TH = { cat: "แมว", dog: "หมา", rabbit: "กระต่าย" };
 
-export async function render(root, params) {
+export async function render(root, params, ctx) {
   const [m, st0] = await Promise.all([manifest(), call("garden_state")]);
   let st = st0;
   let cat = CATS.some(([k]) => k === params.cat) ? params.cat : "trees";
   let sel = m.byId[params.item] ? params.item : null;
   setCoins(st.balance);
+  // the shop has been seen: the "new" dot on the garden's shop button goes away
+  call("save_settings", { shop_seen_at: stamp() }).then((s) => { ctx.settings = s; });
+  if (!params.item) sel = m.items.find((i) => i.new)?.id ?? sel;
+  if (!params.cat && sel) cat = m.byId[sel].cat;
 
   const owned = () => st.items.reduce((a, r) => ((a[r.item] = (a[r.item] || 0) + 1), a), {});
   const left = h("section.card.sketch.sketch--card");
@@ -26,13 +31,13 @@ export async function render(root, params) {
       const art = h("div.product__art");
       art.append(await itemSvg(d.id));
       return h("button.product.sketch", { type: "button", "aria-pressed": d.id === sel ? "true" : "false", onclick: () => { sel = d.id; paintLeft(); paintRight(); } },
-        art, h("span.product__name", {}, d.name, have[d.id] ? h("small", {}, `มีแล้ว ${have[d.id]}`) : null),
+        art, h("span.product__name", {}, d.name, d.new ? h("span.badge.badge--accent", {}, "ของใหม่") : have[d.id] ? h("small", {}, `มีแล้ว ${have[d.id]}`) : null),
         h("span.price", {}, raw(coinSvg(16)), String(d.price)));
     }));
     left.replaceChildren(
       h("div.shop__head", {}, h("a.back", { href: "#/garden" }, raw(icon("left", "ico--sm")), "บ้าน"), h("h1", {}, "ร้านค้า")),
       h("div.chips", {}, chip("สัตว์", false, () => { location.hash = "#/adopt"; }, { plain: true }),
-        ...CATS.map(([k, label]) => chip(label, k === cat, () => { cat = k; sel = null; paintLeft(); paintRight(); }, { plain: true }))),
+        ...CATS.map(([k, label]) => chip(m.items.some((i) => i.cat === k && i.new) ? `${label} •` : label, k === cat, () => { cat = k; sel = null; paintLeft(); paintRight(); }, { plain: true }))),
       h("div.shop__grid", {}, ...cards),
       h("p.hint", { style: { fontSize: "12px" } }, "ทุกชิ้นเป็นของในเกม ได้จากเหรียญที่ทำงานเท่านั้น ไม่มีการใช้เงินจริง"));
   }
@@ -54,7 +59,7 @@ export async function render(root, params) {
     const after = st.balance - d.price;
     const buy = button(after >= 0 ? `ซื้อ ${d.price} เหรียญ` : `เหรียญไม่พอ (ขาด ${-after})`, { kind: "primary", disabled: after < 0, onclick: () => doBuy(d, buy) });
     right.replaceChildren(art,
-      h("h2", {}, d.name, owned()[d.id] ? h("span.badge", {}, `มีแล้ว ${owned()[d.id]}`) : null),
+      h("h2", {}, d.name, d.new ? h("span.badge.badge--accent", {}, "ของใหม่") : null, owned()[d.id] ? h("span.badge", {}, `มีแล้ว ${owned()[d.id]}`) : null),
       h("p.hint", {}, notes),
       h("div.price-box", {},
         h("div", {}, h("span.muted", {}, "ราคา"), h("span.big", {}, raw(coinSvg(20)), `${d.price} เหรียญ`)),

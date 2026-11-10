@@ -11,7 +11,7 @@ use std::sync::{Mutex, MutexGuard, RwLock};
 use crate::repo::{Repo, iso, parse_iso};
 use crate::thaidate as td;
 use crate::timecalc as tc;
-use crate::{csv_io, db, exporter, game, report};
+use crate::{csv_io, db, exporter, game, packs, report};
 
 const MASCOT_SVG: &str = include_str!("../../web/img/chars/character-idle.svg");
 
@@ -30,6 +30,9 @@ pub struct Api {
     pending: Mutex<HashMap<String, Vec<Value>>>,
     today: RwLock<Clock<NaiveDate>>,
     now: RwLock<Clock<NaiveDateTime>>,
+    packs_dir: PathBuf,
+    pack_key: RwLock<[u8; 32]>,
+    packs: RwLock<Vec<packs::Installed>>,
 }
 
 fn arg(args: &[Value], i: usize) -> &Value {
@@ -57,7 +60,12 @@ impl Api {
             std::fs::create_dir_all(dir).map_err(|e| format!("สร้างโฟลเดอร์ข้อมูลไม่ได้: {e}"))?;
         }
         let con = db::connect(&db_file).map_err(|e| format!("เปิดไฟล์ข้อมูลไม่ได้: {e}"))?;
+        let packs_dir = db_file.parent().map(|d| d.join("packs")).unwrap_or_else(|| PathBuf::from("packs"));
+        let installed = packs::load_all(&packs_dir, &packs::PACK_PUBKEY, game::manifest());
         Ok(Self {
+            packs_dir,
+            pack_key: RwLock::new(packs::PACK_PUBKEY),
+            packs: RwLock::new(installed),
             db_file,
             con: Mutex::new(con),
             dialogs: RwLock::new(dialogs),
@@ -74,6 +82,15 @@ impl Api {
     pub fn set_clock(&self, today: Clock<NaiveDate>, now: Clock<NaiveDateTime>) {
         *self.today.write().unwrap() = today;
         *self.now.write().unwrap() = now;
+    }
+    /// Tests sign packs with their own key; installed packs are re-read with it.
+    pub fn set_pack_key(&self, key: [u8; 32]) {
+        *self.pack_key.write().unwrap() = key;
+        *self.packs.write().unwrap() = packs::load_all(&self.packs_dir, &key, game::manifest());
+    }
+    /// Built-in catalogue + installed packs.
+    fn catalog(&self) -> Value {
+        packs::merge(game::manifest(), &self.packs.read().unwrap(), self.today())
     }
     fn today(&self) -> NaiveDate {
         (self.today.read().unwrap())()
@@ -278,19 +295,45 @@ impl Api {
             // ---- garden game
             "garden_state" => game::state(&repo, self.today(), self.now()),
             "quest_claim" => game::claim(&con, &arg_str(args, 0), self.today(), self.now()),
-            "gift_open" => game::open_gift_random(&con),
+            "gift_open" => game::open_gift_random(&con, &self.catalog()),
             "shop_buy" => {
                 let coins = game::balance(&con, &game::rules(&s), self.today(), self.now());
-                game::buy(&con, &arg_str(args, 0), coins)
+                game::buy(&con, &self.catalog(), &arg_str(args, 0), coins)
             }
             "pet_adopt" => {
                 let o = arg(args, 0);
                 let coins = game::balance(&con, &game::rules(&s), self.today(), self.now());
                 let txt = |k: &str| o.get(k).and_then(Value::as_str).unwrap_or("").to_string();
-                game::adopt(&con, &txt("species"), &txt("color"), &txt("name"), coins)
+                game::adopt(&con, &self.catalog(), &txt("species"), &txt("color"), &txt("name"), coins)
             }
             "pet_rename" => game::rename_pet(&con, arg(args, 0).as_i64().unwrap_or(-1), &arg_str(args, 1)),
             "decor_save" => game::save_decor(&con, arg(args, 0)),
+
+            // ---- content packs (the page downloads them; nothing is kept unless every check passes)
+            "garden_catalog" => self.catalog(),
+            "pack_list" => json!(self.packs.read().unwrap().iter().map(|p| json!({"id": p.pack["id"], "version": p.pack["version"], "title": p.pack["title"], "installed_at": p.installed_at})).collect::<Vec<_>>()),
+            "pack_asset" => match packs::asset(&self.packs_dir, &self.packs.read().unwrap(), &arg_str(args, 0), &arg_str(args, 1)) {
+                Some(svg) => json!(svg),
+                None => return Err("ไม่มีไฟล์นี้ในแพ็ก".into()),
+            },
+            "pack_install" => {
+                let o = arg(args, 0);
+                let files: HashMap<String, String> = o["files"].as_object().map(|m| m.iter().map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())).collect()).unwrap_or_default();
+                let key = *self.pack_key.read().unwrap();
+                let now = self.now().format("%Y-%m-%d %H:%M:%S").to_string();
+                let current = self.packs.read().unwrap().clone();
+                match packs::install(&self.packs_dir, &key, game::manifest(), &current, o["pack"].as_str().unwrap_or(""), o["sig"].as_str().unwrap_or(""), &files, &now) {
+                    Ok(p) => {
+                        let summary = json!({"ok": true, "id": p.pack["id"], "version": p.pack["version"], "title": p.pack["title"],
+                                             "items": p.pack["items"].as_array().map_or(0, Vec::len), "pets": p.pack["pets"].as_array().map_or(0, Vec::len)});
+                        let mut list = self.packs.write().unwrap();
+                        list.retain(|x| x.pack["id"] != p.pack["id"]);
+                        list.push(p);
+                        summary
+                    }
+                    Err(e) => json!({"ok": false, "error": {"code": "pack", "message": e}}),
+                }
+            }
             other => return Err(format!("no api {other}")),
         })
     }

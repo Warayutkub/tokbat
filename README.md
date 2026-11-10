@@ -60,6 +60,17 @@ GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ 
 - ชิ้นส่วนสัตว์เป็น class ตามชื่อเลเยอร์ใน Figma (`leg-*`, `tail`, `head`, `eye-l` …) → `web/css/garden.css` ทำให้เดิน กระดิกหาง กะพริบตา
 - หน้าจอ: `web/js/views/{garden,shop,adopt}.js`, `web/js/garden/{stage,decorate,weather,art}.js`
 - ดูอากาศแต่ละแบบ: `http://127.0.0.1:5177/#/garden?sky=day|night|rain|night-rain`
+- เครื่องมือวาด: `tools/garden/` — `draw.py`/`props.py`/`scene.py` สร้างภาพลายเส้น (SVG) ไปลง Figma, `export.py` ส่งออกจาก Figma (พร้อมแปรง) แล้วย่อไฟล์ด้วย `slim.py`
+
+### แพ็กของใหม่ (เพิ่มของแต่ง/สีสัตว์โดยไม่ต้องออกแอปรุ่นใหม่)
+1. วาดและผ่านขั้นอนุมัติใน Figma ก่อน แล้วส่งออก: `python tools/garden/export.py --within <section id> --prefix "Prop/" --out <โฟลเดอร์>/props`
+2. เขียน `<โฟลเดอร์>/pack.src.json` (ตัวอย่างอยู่หัวไฟล์ `tools/make_pack.py`) — รหัสต้องไม่ซ้ำของเดิม
+3. `python tools/make_pack.py <โฟลเดอร์>` → ได้ `docs/packs/<id>/` (pack.json + pack.sig + ภาพ) และรายการใน `docs/packs/index.json`
+4. commit + push → หน้าเว็บอัปเดต → แอปเช็กวันละครั้งตอนต่อเน็ต (ถ้าเปิด "ของใหม่อัตโนมัติ") หรือกด "เช็กของใหม่ตอนนี้" ในตั้งค่า
+- แอปเก็บแพ็กไว้ที่ `packs\` ข้างไฟล์ข้อมูล และติดตั้งเฉพาะแพ็กที่ลายเซ็น ed25519 ตรง hash ของทุกไฟล์ตรง และภาพไม่มีสคริปต์หรือลิงก์ออกนอก (`src-tauri/src/packs.rs`, เทสต์ `tests/packs.rs`)
+- **กุญแจลับสำหรับเซ็นแพ็ก** อยู่ที่ `%USERPROFILE%\.tokbat\pack-signing.key` (สร้างด้วย `python tools/pack_key.py`) — สำรองไว้ที่ปลอดภัย ห้าม commit
+  ถ้ากุญแจหาย ต้องสร้างใหม่และออกแอปรุ่นใหม่ที่มี `PACK_PUBKEY` ใหม่ใน `src-tauri/src/packs.rs`
+- ทดสอบในเครื่อง: build แพ็กลง `web/packs-test` แล้วตั้ง `localStorage["tokbat.packs.index"] = "/packs-test/index.json"` ในหน้า `npm run serve` (ลบทั้งสองอย่างเมื่อเสร็จ)
 
 ### หน้าเว็บ (GitHub Pages จากโฟลเดอร์ `docs/`)
 - ขึ้นเว็บอัตโนมัติด้วย `.github/workflows/pages.yml` ทุกครั้งที่ push การแก้ใน `docs/` ไป main (ตั้งค่า repo: Pages → Source = GitHub Actions)
@@ -81,6 +92,7 @@ src-tauri/
   src/repo.rs           อ่าน/เขียน SQLite · ตรวจเวลาทับกัน
   src/db.rs             schema + migration (PRAGMA user_version)
   src/game.rs           สวนสัตว์เลี้ยง: เหรียญ เควสต์ บัตรสะสม กล่องของขวัญ ร้านค้า สัตว์ การจัดลาน
+  src/packs.rs          แพ็กของใหม่: ตรวจลายเซ็น/hash/ภาพ ติดตั้ง รวมแคตตาล็อก
   src/timecalc.rs       คณิตเวลา: ข้ามวัน, ทศนิยม half-up, ทับกัน
   src/thaidate.rs       วันที่ไทย พ.ศ. · รอบตัดยอด
   src/report.rs         ตัวเลขรายงาน + หน้า A4 (templates/report.html, minijinja)
@@ -91,7 +103,8 @@ src-tauri/
 fixtures/               ชีตตัวอย่าง รูปแบบเดียวกับชีตที่ใช้อยู่ (ข้อมูลสมมติ ใช้ในเทสต์)
 legacy-python/          เวอร์ชัน Python เดิม (pywebview) เก็บไว้อ้างอิง
 docs/                   หน้าเว็บแนะนำ (GitHub Pages)
-tools/                  สคริปต์แยกชิ้นตัวละคร · ทำไอคอน · เตรียมไฟล์หน้าเว็บ
+tools/                  สคริปต์แยกชิ้นตัวละคร · ทำไอคอน · เตรียมไฟล์หน้าเว็บ · ทำ/เซ็นแพ็ก (make_pack, pack_key)
+  garden/               วาดและส่งออกภาพในสวน
 ```
 
 - เครื่องที่จะใช้ต้องมี Microsoft Edge (+ WebView2 Runtime) ซึ่ง Windows 10/11 มีอยู่แล้ว
