@@ -51,6 +51,7 @@ GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ 
 (กะพริบตา กลอกตา หายใจ โบกมือ zz ไอน้ำ กระดาษสี) — ถ้าวาดตัวละครใหม่ใน Figma ต้องแก้ `SPEC` ในสคริปต์ให้ตรงลำดับเลเยอร์
 
 ### หน้าเว็บ (GitHub Pages จากโฟลเดอร์ `docs/`)
+- ขึ้นเว็บอัตโนมัติด้วย `.github/workflows/pages.yml` ทุกครั้งที่ push การแก้ใน `docs/` ไป main (ตั้งค่า repo: Pages → Source = GitHub Actions)
 - `docs/index.html`, `docs/css/site.css`, `docs/js/site.js` เขียนเอง ไม่มี build step
 - `python tools/build_site.py` คัดของจากแอปมาให้: สี (`tokens.css`), การขยับของตัวละคร (`mascots.css` + SVG), ฟอนต์เป็น WOFF2,
   ภาพหน้าจอเป็น WebP จาก `build-assets/site/*.png` — ภาพพวกนี้ถ่ายจากข้อมูลสมมติ (`--serve 5178 --data .demo-data`) ห้ามใช้ข้อมูลจริง
