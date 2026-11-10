@@ -23,7 +23,12 @@ pub fn default_settings() -> Map<String, Value> {
         "report_timestamp": true,
         "report_mascot": true,
         "first_run_done": false,
-        "last_backup": ""
+        "last_backup": "",
+        "game_enabled": true,
+        "start_page": "garden",
+        "coin_cap_hours": 8,
+        "rain": true,
+        "game_started": ""
     });
     v.as_object().unwrap().clone()
 }
@@ -43,10 +48,11 @@ fn session_json(row: &Row) -> rusqlite::Result<Value> {
     let end: Option<i64> = row.get("end_min")?;
     let brk: i64 = row.get("break_min")?;
     let note: String = row.get("note")?;
+    let source: String = row.get("source")?;
     let minutes = end.map(|e| tc::net_minutes(start, e, brk).unwrap_or(0)).unwrap_or(0);
     Ok(json!({
         "id": id, "date": date, "start": tc::fmt_hhmm(start), "end": end.map(tc::fmt_hhmm),
-        "break_min": brk, "note": note, "open": end.is_none(),
+        "break_min": brk, "note": note, "open": end.is_none(), "source": source,
         "overnight": end.is_some_and(|e| tc::is_overnight(start, e)),
         "minutes": minutes, "hours": tc::to_decimal_hours(minutes),
     }))
@@ -163,18 +169,33 @@ impl<'c> Repo<'c> {
             return json!({"ok": false, "error": e});
         }
         let previous = sid.and_then(|id| self.get(id));
+        // timer | manual | import. Changing the times of a timer entry by hand makes it a hand entry.
+        let asked = data.get("source").and_then(Value::as_str).filter(|s| ["timer", "manual", "import"].contains(s));
+        let source = match (&previous, asked) {
+            (_, Some(s)) => s.to_string(),
+            (None, None) => "manual".to_string(),
+            (Some(p), None) => {
+                let same = s_str(p, "date") == iso(d) && s_str(p, "start") == tc::fmt_hhmm(start) && p["end"].as_str() == end.map(tc::fmt_hhmm).as_deref();
+                if same { s_str(p, "source").to_string() } else { "manual".to_string() }
+            }
+        };
         let id = match sid {
             Some(id) => {
                 self.con
                     .execute(
-                        "UPDATE sessions SET work_date=?1, start_min=?2, end_min=?3, break_min=?4, note=?5, updated_at=datetime('now','localtime') WHERE id=?6",
-                        params![iso(d), start, end, brk, note, id],
+                        "UPDATE sessions SET work_date=?1, start_min=?2, end_min=?3, break_min=?4, note=?5, source=?6, updated_at=datetime('now','localtime') WHERE id=?7",
+                        params![iso(d), start, end, brk, note, source, id],
                     )
                     .ok();
                 id
             }
             None => {
-                self.con.execute("INSERT INTO sessions (work_date, start_min, end_min, break_min, note) VALUES (?1,?2,?3,?4,?5)", params![iso(d), start, end, brk, note]).ok();
+                self.con
+                    .execute(
+                        "INSERT INTO sessions (work_date, start_min, end_min, break_min, note, source, created_at) VALUES (?1,?2,?3,?4,?5,?6,?7)",
+                        params![iso(d), start, end, brk, note, source, now.format("%Y-%m-%d %H:%M:%S").to_string()],
+                    )
+                    .ok();
                 self.con.last_insert_rowid()
             }
         };
@@ -197,7 +218,10 @@ impl<'c> Repo<'c> {
         let start = tc::parse_hhmm(s_str(s, "start")).ok()?;
         let end = s["end"].as_str().and_then(|e| tc::parse_hhmm(e).ok());
         self.con
-            .execute("INSERT OR REPLACE INTO sessions (id, work_date, start_min, end_min, break_min, note) VALUES (?1,?2,?3,?4,?5,?6)", params![id, s_str(s, "date"), start, end, s_i64(s, "break_min"), s_str(s, "note")])
+            .execute(
+                "INSERT OR REPLACE INTO sessions (id, work_date, start_min, end_min, break_min, note, source) VALUES (?1,?2,?3,?4,?5,?6,?7)",
+                params![id, s_str(s, "date"), start, end, s_i64(s, "break_min"), s_str(s, "note"), Some(s_str(s, "source")).filter(|x| !x.is_empty()).unwrap_or("manual")],
+            )
             .ok()?;
         self.get(id)
     }

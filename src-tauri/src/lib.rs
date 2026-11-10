@@ -4,6 +4,7 @@ pub mod api;
 pub mod csv_io;
 pub mod db;
 pub mod exporter;
+pub mod game;
 pub mod repo;
 pub mod report;
 pub mod serve;

@@ -10,6 +10,7 @@ export async function render(root, params, ctx) {
   const save = async (patch) => {
     s = ctx.settings = await call("save_settings", patch);
     document.body.classList.toggle("no-chars", !s.show_characters);
+    document.body.classList.toggle("no-game", s.game_enabled === false);
     saved.textContent = "บันทึกการตั้งค่าแล้ว ✓";
     clearTimeout(save.t); save.t = setTimeout(() => { saved.textContent = ""; }, 2000);
     paint();
@@ -43,6 +44,16 @@ export async function render(root, params, ctx) {
         sw("เตือนเมื่อมีวันที่ลืมกรอก", "แสดงในแถบสัปดาห์บนหน้าบันทึกเวลา", "remind_missing")),
       saved);
     const right = h("div.settings__col", {},
+      card("สวนสัตว์เลี้ยง", "paw",
+        sw("เปิดสวนสัตว์เลี้ยง", "ปิดแล้วแอปกลับเป็นแบบเดิม · เหรียญ สัตว์ และของแต่งยังเก็บไว้", "game_enabled"),
+        s.game_enabled !== false ? [
+          setting("หน้าแรกเมื่อเปิดแอป", null, h("div.chips", {},
+            chip("บ้าน", s.start_page === "garden", () => save({ start_page: "garden" })), chip("บันทึกเวลา", s.start_page !== "garden", () => save({ start_page: "log" })))),
+          setting("เหรียญสูงสุดต่อวัน", "ได้ชั่วโมงละ 2 เหรียญ ถึงเพดานแล้วหยุดนับ", h("div.chips", {},
+            ...[8, 10, 12].map((hr) => chip(`${hr} ชม. · ${hr * 2}`, s.coin_cap_hours === hr, () => save({ coin_cap_hours: hr }))))),
+          sw("ฝนตก", "ชั่วโมงละครั้ง ครั้งละ 15 นาที สุ่มเวลาเอง · ไม่ใช้เน็ต", "rain"),
+          h("p.hint", { style: { fontSize: "12px" } }, "สัตว์และของแต่งไม่ไปอยู่ในรายงานหรือไฟล์ส่งออก"),
+        ] : null),
       card("ข้อมูลในเครื่อง", "database",
         h("div.setting-row", {}, h("span.input.sketch", { style: { flex: 1 } }, raw(icon("folder", "ico--sm")), h("span", { style: { fontSize: "14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, title: info.db_path }, info.db_path_short)),
           button("เปิดโฟลเดอร์", { small: true, onclick: () => call("reveal", info.db_path) })),

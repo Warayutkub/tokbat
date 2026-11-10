@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/screens.css">
   <link rel="stylesheet" href="css/mascots.css">
+  <link rel="stylesheet" href="css/garden.css">
 </head>
 <body>
   <!-- hand-drawn outline filters (Figma "Dynamic" stroke) + hatch for a running session -->
@@ -29,17 +30,21 @@
   </svg>
 
   <header class="topbar">
-    <a class="brand" href="#/log" aria-label="ตอกบัตร หน้าบันทึกเวลา">
+    <a class="brand" href="#/" aria-label="ตอกบัตร หน้าแรก">
       <span class="mascot" data-pose="peek" style="width:46px;height:46px"></span>
       <span><span class="brand__name">ตอกบัตร</span><br><span class="brand__sub">บันทึกเวลาทำงาน</span></span>
     </a>
     <nav class="tabs" aria-label="เมนูหลัก">
+      <a class="tab" href="#/garden" data-tab="garden">บ้าน</a>
       <a class="tab" href="#/log" data-tab="log">บันทึกเวลา</a>
       <a class="tab" href="#/history" data-tab="history">ประวัติ</a>
       <a class="tab" href="#/report" data-tab="report">รายงาน</a>
       <a class="tab" href="#/settings" data-tab="settings">ตั้งค่า</a>
     </nav>
-    <p class="local-note"><svg class="ico ico--sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>ข้อมูลเก็บในเครื่องนี้ (SQLite)</p>
+    <div class="topbar__right">
+      <a class="coins sketch" href="#/garden" title="เหรียญในสวน"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.6" fill="#FFD54A" stroke="#22304A" stroke-width="1.8"/><circle cx="12" cy="12" r="5.4" fill="none" stroke="#D9A21B" stroke-width="1.7"/></svg><b class="num" id="coins">–</b><small>เหรียญ</small></a>
+      <p class="local-note"><svg class="ico ico--sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>ข้อมูลเก็บในเครื่องนี้ (SQLite)</p>
+    </div>
   </header>
 
   <main id="view" class="view-host" tabindex="-1"></main>

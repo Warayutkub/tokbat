@@ -6,21 +6,27 @@ import * as history from "./views/history.js";
 import * as report from "./views/report.js";
 import * as settings from "./views/settings.js";
 import * as welcome from "./views/welcome.js";
+import * as garden from "./views/garden.js";
+import * as shop from "./views/shop.js";
+import * as adopt from "./views/adopt.js";
 
-const VIEWS = { log, history, report, settings, welcome };
+const VIEWS = { log, history, report, settings, welcome, garden, shop, adopt };
+const TAB_OF = { shop: "garden", adopt: "garden" };
 const ctx = { settings: {}, today: null };
 let cleanup = null;
 let seq = 0;
 
 function route() {
   const [path, qs] = location.hash.replace(/^#\/?/, "").split("?");
-  return { name: VIEWS[path] ? path : "log", params: Object.fromEntries(new URLSearchParams(qs || "")) };
+  const home = ctx.settings.game_enabled !== false && ctx.settings.start_page === "garden" ? "garden" : "log";
+  return { name: VIEWS[path] ? path : home, params: Object.fromEntries(new URLSearchParams(qs || "")) };
 }
 
 async function show() {
   const { name, params } = route();
   const my = ++seq;
-  document.querySelectorAll(".tab").forEach((t) => (t.dataset.tab === name ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current")));
+  const tab = TAB_OF[name] || name;
+  document.querySelectorAll(".tab").forEach((t) => (t.dataset.tab === tab ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current")));
   // every visit renders into its own box, so a slow, older visit can never paint over a newer one
   const root = document.createElement("div");
   root.className = "view";
@@ -43,6 +49,14 @@ async function boot() {
   ctx.settings = b.settings;
   ctx.today = b.today;
   document.body.classList.toggle("no-chars", !b.settings.show_characters);
+  document.body.classList.toggle("no-game", b.settings.game_enabled === false);
+  window.addEventListener("garden:coins", (e) => {
+    const pill = document.querySelector(".coins");
+    document.getElementById("coins").textContent = e.detail.n;
+    pill.classList.toggle("is-negative", e.detail.n < 0);
+    if (e.detail.bump) { pill.classList.remove("is-bump"); void pill.offsetWidth; pill.classList.add("is-bump"); }
+  });
+  if (b.settings.game_enabled !== false) call("garden_state").then((g) => garden.setCoins(g.balance)).catch(() => {});
   hydrateMascots();
   if (!location.hash && b.count === 0 && !b.settings.first_run_done) location.hash = "#/welcome";
   window.addEventListener("hashchange", show);

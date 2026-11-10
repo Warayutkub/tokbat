@@ -24,6 +24,7 @@ const ICONS = {
   coffee: '<path d="M5 9h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M12 3v3"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   spinner: '<path d="M12 3a9 9 0 1 0 9 9"/>',
+  paw: '<circle cx="6.5" cy="10" r="1.7"/><circle cx="10" cy="6" r="1.7"/><circle cx="14" cy="6" r="1.7"/><circle cx="17.5" cy="10" r="1.7"/><path d="M12 12c-3 0-5.2 3-5.2 5.1 0 1.8 1.6 2.6 3.1 2 .8-.3 1.4-.5 2.1-.5s1.3.2 2.1.5c1.5.6 3.1-.2 3.1-2 0-2.1-2.2-5.1-5.2-5.1z"/>',
 };
 
 export function icon(name, cls = "") {

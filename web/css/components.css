@@ -16,7 +16,7 @@
 /* ---------- top bar ---------- */
 .topbar {
   display: grid;
-  grid-template-columns: 260px 1fr 260px;
+  grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr);
   align-items: center;
   padding: 16px var(--space-2xl) 8px;
   flex: none;

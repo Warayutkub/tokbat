@@ -27,6 +27,49 @@ const MIGRATIONS: &[&str] = &[
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
     "#,
+    // 2 — garden game. Sessions remember where they came from: only the timer and hand entries earn coins,
+    // imports and everything from before the game ("legacy") never do.
+    r#"
+    ALTER TABLE sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual';
+    UPDATE sessions SET source = 'legacy';
+    CREATE TABLE coin_ledger (
+        id    INTEGER PRIMARY KEY AUTOINCREMENT,
+        at    TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+        delta INTEGER NOT NULL,
+        kind  TEXT    NOT NULL,             -- welcome | quest | buy | adopt | gift
+        ref   TEXT    NOT NULL DEFAULT ''
+    );
+    CREATE UNIQUE INDEX idx_ledger_once ON coin_ledger (kind, ref) WHERE kind IN ('welcome', 'quest');
+    CREATE TABLE quest_claims (
+        period     TEXT    NOT NULL,        -- 2026-11-10 | W2026-11-09 | once
+        quest_id   TEXT    NOT NULL,
+        coins      INTEGER NOT NULL,
+        claimed_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+        PRIMARY KEY (period, quest_id)
+    );
+    CREATE TABLE gifts (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id   TEXT NOT NULL,            -- '' when the box held coins
+        rarity    TEXT NOT NULL,
+        opened_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    );
+    CREATE TABLE owned_items (
+        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id  TEXT    NOT NULL,
+        x        REAL,                      -- NULL = in the tray, otherwise placed in the garden (world units)
+        y        REAL,
+        flip     INTEGER NOT NULL DEFAULT 0,
+        got_from TEXT    NOT NULL,          -- starter | shop | gift
+        got_at   TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+    );
+    CREATE TABLE pets (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        species    TEXT NOT NULL,
+        color      TEXT NOT NULL,
+        name       TEXT NOT NULL,
+        adopted_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    );
+    "#,
 ];
 
 pub fn connect(path: &Path) -> rusqlite::Result<Connection> {

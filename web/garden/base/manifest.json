@@ -1,0 +1,561 @@
+{
+ "version": 1,
+ "world": {
+  "w": 1280,
+  "h": 800,
+  "horizon": 330
+ },
+ "items": [
+  {
+   "id": "tree-round",
+   "name": "ต้นไม้พุ่มกลม",
+   "cat": "trees",
+   "price": 50,
+   "rarity": "common",
+   "w": 210.0,
+   "h": 250.0,
+   "shelter": true
+  },
+  {
+   "id": "pine",
+   "name": "ต้นสน",
+   "cat": "trees",
+   "price": 50,
+   "rarity": "common",
+   "w": 170.0,
+   "h": 252.0,
+   "shelter": true
+  },
+  {
+   "id": "coconut",
+   "name": "ต้นมะพร้าว",
+   "cat": "trees",
+   "price": 70,
+   "rarity": "rare",
+   "w": 220.0,
+   "h": 280.0,
+   "shelter": true
+  },
+  {
+   "id": "tree-pink",
+   "name": "ชมพูพันธุ์ทิพย์",
+   "cat": "trees",
+   "price": 60,
+   "rarity": "rare",
+   "w": 210.0,
+   "h": 250.0,
+   "shelter": true
+  },
+  {
+   "id": "tree-mango",
+   "name": "ต้นมะม่วง",
+   "cat": "trees",
+   "price": 60,
+   "rarity": "rare",
+   "w": 210.0,
+   "h": 250.0,
+   "shelter": true
+  },
+  {
+   "id": "sapling",
+   "name": "ต้นกล้า",
+   "cat": "trees",
+   "price": 10,
+   "rarity": "common",
+   "w": 96.0,
+   "h": 114.0
+  },
+  {
+   "id": "bush",
+   "name": "พุ่มไม้",
+   "cat": "plants",
+   "price": 20,
+   "rarity": "common",
+   "w": 140.0,
+   "h": 98.0
+  },
+  {
+   "id": "berry-bush",
+   "name": "พุ่มเบอร์รี่",
+   "cat": "plants",
+   "price": 25,
+   "rarity": "common",
+   "w": 140.0,
+   "h": 98.0
+  },
+  {
+   "id": "sunflower",
+   "name": "ทานตะวัน",
+   "cat": "plants",
+   "price": 15,
+   "rarity": "common",
+   "w": 100.0,
+   "h": 200.0
+  },
+  {
+   "id": "tulips",
+   "name": "ทิวลิป",
+   "cat": "plants",
+   "price": 15,
+   "rarity": "common",
+   "w": 132.0,
+   "h": 130.0
+  },
+  {
+   "id": "cactus",
+   "name": "กระบองเพชร",
+   "cat": "plants",
+   "price": 20,
+   "rarity": "common",
+   "w": 104.0,
+   "h": 156.0
+  },
+  {
+   "id": "potted-plant",
+   "name": "ไม้กระถาง",
+   "cat": "plants",
+   "price": 20,
+   "rarity": "common",
+   "w": 122.0,
+   "h": 158.0
+  },
+  {
+   "id": "taro-leaf",
+   "name": "ใบบอน",
+   "cat": "plants",
+   "price": 15,
+   "rarity": "common",
+   "w": 184.0,
+   "h": 200.0,
+   "shelter": true
+  },
+  {
+   "id": "mushrooms",
+   "name": "เห็ด",
+   "cat": "plants",
+   "price": 10,
+   "rarity": "common",
+   "w": 112.0,
+   "h": 98.0
+  },
+  {
+   "id": "dog-house",
+   "name": "บ้านหมา",
+   "cat": "homes",
+   "price": 100,
+   "rarity": "rare",
+   "w": 190.0,
+   "h": 172.0,
+   "shelter": true,
+   "bed": [
+    "dog"
+   ]
+  },
+  {
+   "id": "cat-tower",
+   "name": "คอนโดแมว",
+   "cat": "homes",
+   "price": 90,
+   "rarity": "rare",
+   "w": 172.0,
+   "h": 240.0,
+   "bed": [
+    "cat"
+   ]
+  },
+  {
+   "id": "rabbit-hutch",
+   "name": "บ้านกระต่าย",
+   "cat": "homes",
+   "price": 100,
+   "rarity": "rare",
+   "w": 198.0,
+   "h": 174.0,
+   "shelter": true,
+   "bed": [
+    "rabbit"
+   ]
+  },
+  {
+   "id": "card-box",
+   "name": "กล่องกระดาษ",
+   "cat": "homes",
+   "price": 15,
+   "rarity": "common",
+   "w": 152.0,
+   "h": 120.0,
+   "bed": [
+    "cat"
+   ],
+   "shelter": true
+  },
+  {
+   "id": "pet-bed",
+   "name": "เบาะนอน",
+   "cat": "homes",
+   "price": 40,
+   "rarity": "common",
+   "w": 172.0,
+   "h": 90.0,
+   "bed": [
+    "cat",
+    "dog",
+    "rabbit"
+   ]
+  },
+  {
+   "id": "teepee",
+   "name": "เต็นท์",
+   "cat": "homes",
+   "price": 80,
+   "rarity": "special",
+   "w": 152.0,
+   "h": 166.0,
+   "shelter": true,
+   "bed": [
+    "cat",
+    "dog",
+    "rabbit"
+   ]
+  },
+  {
+   "id": "carrot-plot",
+   "name": "แปลงแครอท",
+   "cat": "farm",
+   "price": 40,
+   "rarity": "common",
+   "w": 232.0,
+   "h": 124.0
+  },
+  {
+   "id": "cabbage-plot",
+   "name": "แปลงกะหล่ำ",
+   "cat": "farm",
+   "price": 40,
+   "rarity": "common",
+   "w": 232.0,
+   "h": 124.0
+  },
+  {
+   "id": "tomato",
+   "name": "ต้นมะเขือเทศ",
+   "cat": "farm",
+   "price": 30,
+   "rarity": "common",
+   "w": 112.0,
+   "h": 162.0
+  },
+  {
+   "id": "watering-can",
+   "name": "บัวรดน้ำ",
+   "cat": "farm",
+   "price": 15,
+   "rarity": "common",
+   "w": 136.0,
+   "h": 92.0
+  },
+  {
+   "id": "hay-bale",
+   "name": "ฟางก้อน",
+   "cat": "farm",
+   "price": 20,
+   "rarity": "common",
+   "w": 144.0,
+   "h": 84.0
+  },
+  {
+   "id": "scarecrow",
+   "name": "หุ่นไล่กา",
+   "cat": "farm",
+   "price": 70,
+   "rarity": "special",
+   "w": 162.0,
+   "h": 222.0
+  },
+  {
+   "id": "food-bowl",
+   "name": "ชามอาหาร",
+   "cat": "toys",
+   "price": 10,
+   "rarity": "common",
+   "w": 82.0,
+   "h": 52.0
+  },
+  {
+   "id": "water-bowl",
+   "name": "ชามน้ำ",
+   "cat": "toys",
+   "price": 10,
+   "rarity": "common",
+   "w": 82.0,
+   "h": 52.0
+  },
+  {
+   "id": "ball",
+   "name": "ลูกบอล",
+   "cat": "toys",
+   "price": 8,
+   "rarity": "common",
+   "w": 48.0,
+   "h": 48.0
+  },
+  {
+   "id": "bone",
+   "name": "กระดูก",
+   "cat": "toys",
+   "price": 8,
+   "rarity": "common",
+   "w": 76.0,
+   "h": 38.0
+  },
+  {
+   "id": "yarn",
+   "name": "ไหมพรม",
+   "cat": "toys",
+   "price": 8,
+   "rarity": "common",
+   "w": 64.0,
+   "h": 64.0
+  },
+  {
+   "id": "frisbee",
+   "name": "จานร่อน",
+   "cat": "toys",
+   "price": 10,
+   "rarity": "common",
+   "w": 68.0,
+   "h": 34.0
+  },
+  {
+   "id": "scratch-post",
+   "name": "ที่ลับเล็บ",
+   "cat": "toys",
+   "price": 25,
+   "rarity": "common",
+   "w": 92.0,
+   "h": 142.0
+  },
+  {
+   "id": "bench",
+   "name": "ม้านั่ง",
+   "cat": "decor",
+   "price": 40,
+   "rarity": "common",
+   "w": 184.0,
+   "h": 110.0
+  },
+  {
+   "id": "lamp-post",
+   "name": "เสาไฟ",
+   "cat": "decor",
+   "price": 50,
+   "rarity": "rare",
+   "w": 72.0,
+   "h": 202.0,
+   "light": [
+    36,
+    39
+   ]
+  },
+  {
+   "id": "mailbox",
+   "name": "ตู้จดหมาย",
+   "cat": "decor",
+   "price": 35,
+   "rarity": "common",
+   "w": 110.0,
+   "h": 142.0
+  },
+  {
+   "id": "signpost",
+   "name": "ป้ายไม้",
+   "cat": "decor",
+   "price": 25,
+   "rarity": "common",
+   "w": 120.0,
+   "h": 140.0
+  },
+  {
+   "id": "picket-fence",
+   "name": "รั้วขาว",
+   "cat": "decor",
+   "price": 30,
+   "rarity": "common",
+   "w": 190.0,
+   "h": 92.0
+  },
+  {
+   "id": "wood-fence",
+   "name": "รั้วไม้",
+   "cat": "decor",
+   "price": 30,
+   "rarity": "common",
+   "w": 186.0,
+   "h": 92.0
+  },
+  {
+   "id": "pond",
+   "name": "บ่อน้ำ",
+   "cat": "ground",
+   "price": 60,
+   "rarity": "rare",
+   "w": 224.0,
+   "h": 104.0,
+   "ground": true
+  },
+  {
+   "id": "stepping-stones",
+   "name": "ทางเดินหิน",
+   "cat": "ground",
+   "price": 20,
+   "rarity": "common",
+   "w": 196.0,
+   "h": 66.0,
+   "ground": true
+  },
+  {
+   "id": "picnic-mat",
+   "name": "ผ้าปิกนิก",
+   "cat": "ground",
+   "price": 25,
+   "rarity": "common",
+   "w": 184.0,
+   "h": 94.0,
+   "ground": true
+  },
+  {
+   "id": "grass-tuft",
+   "name": "หย่อมหญ้า",
+   "cat": "ground",
+   "price": 5,
+   "rarity": "common",
+   "w": 52.0,
+   "h": 34.0,
+   "ground": true
+  },
+  {
+   "id": "stones",
+   "name": "ก้อนหิน",
+   "cat": "ground",
+   "price": 8,
+   "rarity": "common",
+   "w": 72.0,
+   "h": 44.0,
+   "ground": true
+  },
+  {
+   "id": "flower-patch",
+   "name": "ดอกไม้เล็ก",
+   "cat": "ground",
+   "price": 12,
+   "rarity": "common",
+   "w": 118.0,
+   "h": 56.0,
+   "ground": true
+  }
+ ],
+ "pets": [
+  {
+   "species": "cat",
+   "color": "orange",
+   "colorName": "ส้มลาย",
+   "speciesName": "แมว",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "cat",
+   "color": "white",
+   "colorName": "ขาว",
+   "speciesName": "แมว",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "cat",
+   "color": "black",
+   "colorName": "ดำ",
+   "speciesName": "แมว",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "cat",
+   "color": "grey",
+   "colorName": "เทา",
+   "speciesName": "แมว",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "dog",
+   "color": "gold",
+   "colorName": "ทอง",
+   "speciesName": "หมา",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "dog",
+   "color": "brown",
+   "colorName": "น้ำตาล",
+   "speciesName": "หมา",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "dog",
+   "color": "spotted",
+   "colorName": "ขาวจุด",
+   "speciesName": "หมา",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "dog",
+   "color": "black",
+   "colorName": "ดำ",
+   "speciesName": "หมา",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "rabbit",
+   "color": "white",
+   "colorName": "ขาว",
+   "speciesName": "กระต่าย",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "rabbit",
+   "color": "grey",
+   "colorName": "เทา",
+   "speciesName": "กระต่าย",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "rabbit",
+   "color": "brown",
+   "colorName": "น้ำตาล",
+   "speciesName": "กระต่าย",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "rabbit",
+   "color": "cream",
+   "colorName": "ครีม",
+   "speciesName": "กระต่าย",
+   "w": 180.0,
+   "h": 162.0
+  }
+ ],
+ "bg": {
+  "day": "bg/day.svg",
+  "night": "bg/night.svg",
+  "rain": "bg/rain.svg",
+  "night-rain": "bg/night-rain.svg"
+ }
+}

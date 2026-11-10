@@ -11,7 +11,7 @@ use std::sync::{Mutex, MutexGuard, RwLock};
 use crate::repo::{Repo, iso, parse_iso};
 use crate::thaidate as td;
 use crate::timecalc as tc;
-use crate::{csv_io, db, exporter, report};
+use crate::{csv_io, db, exporter, game, report};
 
 const MASCOT_SVG: &str = include_str!("../../web/img/chars/character-idle.svg");
 
@@ -168,7 +168,7 @@ impl Api {
             "restore_session" => json!({"ok": true, "session": repo.restore(arg(args, 0))}),
             "start_now" => {
                 let now = self.now();
-                repo.save(&json!({"date": iso(now.date()), "start": now.format("%H:%M").to_string(), "end": null, "break_min": 0, "note": ""}), now)
+                repo.save(&json!({"date": iso(now.date()), "start": now.format("%H:%M").to_string(), "end": null, "break_min": 0, "note": "", "source": "timer"}), now)
             }
             "stop_now" => {
                 let Some(mut x) = repo.get(arg(args, 0).as_i64().unwrap_or(-1)).filter(|x| x["open"] == true) else {
@@ -182,6 +182,7 @@ impl Api {
                     return Ok(json!({"ok": false, "error": {"code": "too_long", "message": "ช่วงนี้เกิน 24 ชั่วโมงแล้ว กรอกเวลาออกงานเองแทนนะ"}}));
                 }
                 x["end"] = json!(now.format("%H:%M").to_string());
+                x["source"] = json!("timer");
                 repo.save(&x, now)
             }
             "mark_day_off" => {
@@ -259,7 +260,9 @@ impl Api {
                 let now = self.now();
                 let (mut added, mut conflicts) = (0, 0);
                 for r in &rows {
-                    if repo.save(r, now)["ok"] == true {
+                    let mut r = r.clone();
+                    r["source"] = json!("import");
+                    if repo.save(&r, now)["ok"] == true {
                         added += 1
                     } else {
                         conflicts += 1
@@ -271,6 +274,23 @@ impl Api {
                 json!({"ok": true, "added": added, "conflicts": conflicts})
             }
             "delete_all" => json!({"ok": true, "deleted": repo.delete_all()}),
+
+            // ---- garden game
+            "garden_state" => game::state(&repo, self.today(), self.now()),
+            "quest_claim" => game::claim(&con, &arg_str(args, 0), self.today(), self.now()),
+            "gift_open" => game::open_gift_random(&con),
+            "shop_buy" => {
+                let coins = game::balance(&con, &game::rules(&s), self.today(), self.now());
+                game::buy(&con, &arg_str(args, 0), coins)
+            }
+            "pet_adopt" => {
+                let o = arg(args, 0);
+                let coins = game::balance(&con, &game::rules(&s), self.today(), self.now());
+                let txt = |k: &str| o.get(k).and_then(Value::as_str).unwrap_or("").to_string();
+                game::adopt(&con, &txt("species"), &txt("color"), &txt("name"), coins)
+            }
+            "pet_rename" => game::rename_pet(&con, arg(args, 0).as_i64().unwrap_or(-1), &arg_str(args, 1)),
+            "decor_save" => game::save_decor(&con, arg(args, 0)),
             other => return Err(format!("no api {other}")),
         })
     }
