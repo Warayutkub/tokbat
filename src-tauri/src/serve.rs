@@ -122,8 +122,9 @@ fn percent_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-pub fn run(port: u16) {
-    let dev = std::env::var("TOKBAT_DATA_DIR").map(PathBuf::from).unwrap_or_else(|_| root().join(".dev-data"));
+/// `data`: folder for this server's database (default TOKBAT_DATA_DIR, then .dev-data/).
+pub fn run(port: u16, data: Option<PathBuf>) {
+    let dev = data.or_else(|| std::env::var("TOKBAT_DATA_DIR").ok().map(PathBuf::from)).unwrap_or_else(|| root().join(".dev-data"));
     let api = Arc::new(Api::new(dev.join("worktime.db"), Some(Box::new(DevDialogs { dev: dev.clone() }))).expect("open dev database"));
     let web = Arc::new(root().join("web"));
     let server = Server::http(("127.0.0.1", port)).expect("port in use?");

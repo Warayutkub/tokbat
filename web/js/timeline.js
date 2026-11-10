@@ -113,11 +113,15 @@ export function drawTimeline(svg, opts) {
       });
     }
     bar.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onSelect?.(it.id); } });
+    const withText = !sel && x2 - x1 > 150;
     if (it.breakMin > 0 && x2 - x1 > 30) {
       const bw = ((x2 - x1) * it.breakMin) / (it.endAbs - it.startAbs);
-      s("rect", { class: "tl-break", x: (x1 + x2) / 2 - bw / 2, y: (sel ? BAR_TOP : BAR_TOP + 4) + 6, width: bw, height: (sel ? BAR_H : BAR_H - 8) - 12, rx: 4, "pointer-events": "none" }, svg);
+      // under a label the break is a thin strip along the bottom, so it never covers the text
+      const y = withText ? BAR_TOP + 4 + (BAR_H - 8) - 9 : (sel ? BAR_TOP : BAR_TOP + 4) + 6;
+      const hgt = withText ? 5 : (sel ? BAR_H : BAR_H - 8) - 12;
+      s("rect", { class: "tl-break", x: (x1 + x2) / 2 - bw / 2, y, width: bw, height: hgt, rx: withText ? 2.5 : 4, "pointer-events": "none" }, svg);
     }
-    if (!sel && x2 - x1 > 150) {
+    if (withText) {
       const t = s("text", { class: "tl-bar-text", x: (x1 + x2) / 2, y: BAR_TOP + 30, "text-anchor": "middle" }, svg);
       t.textContent = `${it.label} · ${it.sub}`;
     }

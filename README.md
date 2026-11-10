@@ -3,7 +3,10 @@
 แอปบันทึกเวลาทำงานบนเครื่อง (Windows) — Rust + Tauri 2 + SQLite, หน้าจอ HTML/CSS ใน Edge WebView2
 ไม่ต้องใช้อินเทอร์เน็ต ไม่มีบัญชี ข้อมูลอยู่ในเครื่องเท่านั้น
 
-ดีไซน์: Figma ไฟล์ `work-time` › section `ตอกบัตร · Prototype · Approved` และ `ตอกบัตร · Foundations · Approved`
+**หน้าเว็บ + ดาวน์โหลด:** https://warayutkub.github.io/tokbat/
+
+ดีไซน์: Figma ไฟล์ `work-time` › section `ตอกบัตร · Prototype · Approved`, `ตอกบัตร · Foundations · Approved`
+และหน้าเว็บ `ตอกบัตร หน้าเว็บแนะนำ · Prototype · Approved`
 
 ## ทำอะไรได้
 - กรอกเวลาเข้า–ออก หลายช่วงต่อวัน ลากหัว–ท้ายแท่งบนไทม์ไลน์ 24 ชม. หรือพิมพ์เวลาเอง
@@ -20,11 +23,18 @@
 ถอนการติดตั้งแอปไม่ลบโฟลเดอร์นี้
 
 ## ติดตั้ง
+ดาวน์โหลด `tokbat_x64-setup.exe` จาก [Releases](https://github.com/Warayutkub/tokbat/releases/latest) (ติดตั้งให้ผู้ใช้คนเดียว ไม่ต้องสิทธิ์แอดมิน)
+
+สร้างเอง:
 ```
 npm install
 npm run build
 ```
-ได้ตัวติดตั้งไฟล์เดียวที่ `src-tauri/target/release/bundle/nsis/` (ติดตั้งให้ผู้ใช้คนเดียว ไม่ต้องสิทธิ์แอดมิน)
+ได้ตัวติดตั้งที่ `src-tauri/target/release/bundle/nsis/`
+
+### ออกเวอร์ชันใหม่
+แก้ `version` ใน `src-tauri/tauri.conf.json` และ `src-tauri/Cargo.toml` → commit → push tag เช่น `git tag v0.2.3 && git push origin v0.2.3`
+GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ สร้างตัวติดตั้ง แล้วแนบใน release ชื่อ `tokbat_x64-setup.exe` (ชื่อคงที่ ปุ่มดาวน์โหลดบนหน้าเว็บจึงลิงก์ตรงได้)
 
 ## พัฒนา
 ต้องมี Rust (stable) + Node.js
@@ -39,6 +49,12 @@ npm run build
 `web/img/chars/character-*.svg` ส่งออกจาก Figma (ลายแปรง GRINDHOUSE) → `python tools/split_mascots.py`
 แยกเป็นชิ้น (`p-fig › p-face › p-eye-l › p-pupil` ฯลฯ) ลง `web/img/chars/anim/` แล้ว `web/css/mascots.css` ทำให้ขยับ
 (กะพริบตา กลอกตา หายใจ โบกมือ zz ไอน้ำ กระดาษสี) — ถ้าวาดตัวละครใหม่ใน Figma ต้องแก้ `SPEC` ในสคริปต์ให้ตรงลำดับเลเยอร์
+
+### หน้าเว็บ (GitHub Pages จากโฟลเดอร์ `docs/`)
+- `docs/index.html`, `docs/css/site.css`, `docs/js/site.js` เขียนเอง ไม่มี build step
+- `python tools/build_site.py` คัดของจากแอปมาให้: สี (`tokens.css`), การขยับของตัวละคร (`mascots.css` + SVG), ฟอนต์เป็น WOFF2,
+  ภาพหน้าจอเป็น WebP จาก `build-assets/site/*.png` — ภาพพวกนี้ถ่ายจากข้อมูลสมมติ (`--serve 5178 --data .demo-data`) ห้ามใช้ข้อมูลจริง
+- ดูในเครื่อง: `python -m http.server 5180 --directory docs`
 
 ### Design tokens
 `web/css/tokens.css` เขียนตาม Foundations ใน Figma (wridge `get_tokens` อ่านได้เฉพาะ *หน้า* ชื่อ Foundations)
@@ -61,8 +77,12 @@ src-tauri/
   tests/                เทสต์ (ชุดเดียวกับ legacy-python/tests)
 fixtures/               ชีตตัวอย่าง รูปแบบเดียวกับชีตที่ใช้อยู่ (ข้อมูลสมมติ ใช้ในเทสต์)
 legacy-python/          เวอร์ชัน Python เดิม (pywebview) เก็บไว้อ้างอิง
-tools/                  สคริปต์แยกชิ้นตัวละคร · ทำไอคอน
+docs/                   หน้าเว็บแนะนำ (GitHub Pages)
+tools/                  สคริปต์แยกชิ้นตัวละคร · ทำไอคอน · เตรียมไฟล์หน้าเว็บ
 ```
 
 - เครื่องที่จะใช้ต้องมี Microsoft Edge (+ WebView2 Runtime) ซึ่ง Windows 10/11 มีอยู่แล้ว
 - ถ้าแอปเปิดไม่ขึ้น ดู `Documents\ตอกบัตร\error.log`
+
+## License
+โค้ดใช้ [MIT](LICENSE) · ตัวการ์ตูน ไอคอน และชื่อ "ตอกบัตร" สงวนสิทธิ์ ([NOTICE.md](NOTICE.md)) · ฟอนต์ IBM Plex Sans Thai Looped ใช้ OFL 1.1
