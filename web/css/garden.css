@@ -243,3 +243,13 @@ body.no-game .coins, body.no-game .tab[data-tab="garden"] { display: none; }
 .g-pet.is-wet .ear-l { transform: rotate(-14deg); }
 .g-pet.is-wet .ear-r { animation: none; transform: rotate(14deg); }
 @keyframes shiver { from { transform: translateX(-1.2px); } to { transform: translateX(1.2px); } }
+
+/* pet name tag opens the pet card */
+.g-tag { cursor: pointer; }
+.g-tag:hover { background: var(--color-accent-soft); }
+.g-tag__edit { margin-left: -1px; }
+.pet-card { width: 380px; align-items: center; text-align: center; }
+.pet-card .field { width: 100%; text-align: left; }
+.pet-card__art { width: 200px; height: 180px; margin: -4px 0 -6px; animation: hop 0.8s var(--ease-out) 0.15s; }
+.pet-card__art svg { width: 100%; height: 100%; }
+.pet-card .dialog__actions { width: 100%; }

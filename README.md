@@ -18,6 +18,8 @@
 - รายงาน: รอบตัดยอด (ตามเดือน หรือตัดทุกวันที่ N) ชั่วโมงรวมคิดจากนาทีจริง
 - ส่งออก A4 เป็น **PDF** หรือ **PNG** แบบเดียวกับชีตเดิม (วันที่ · เวลาเริ่ม · เวลาหยุด · ชั่วโมงทศนิยม · หมายเหตุ)
 - สำรอง / กู้คืนไฟล์ข้อมูล · นำเข้า CSV จาก Google Sheets
+- **สวนสัตว์เลี้ยง** (แท็บ "บ้าน", ตั้งแต่ 0.3.0): ทำงานได้เหรียญ ชั่วโมงละ 2 วันละไม่เกิน 16 · เควสต์รายวัน/สัปดาห์/พิเศษ · บัตรสะสม 10 ช่อง → กล่องของขวัญ (บอกโอกาส ไม่ได้ของซ้ำ) ·
+  ร้านค้า ของแต่ง 45 ชิ้น สัตว์ 3 ชนิด × 4 สี · ลากวางในลาน · กลางวัน/กลางคืนตามนาฬิกา ฝนตกชั่วโมงละ 15 นาที (ไม่ใช้เน็ต) — ปิดได้ในตั้งค่า ไม่ไปอยู่ในรายงาน
 
 ข้อมูลอยู่ที่ `Documents\ตอกบัตร\worktime.db` (ตั้ง `TOKBAT_DATA_DIR` เพื่อย้ายที่ได้) — ไฟล์เดียวกับเวอร์ชัน Python เดิม ใช้ต่อได้เลย
 ถอนการติดตั้งแอปไม่ลบโฟลเดอร์นี้
@@ -33,7 +35,7 @@ npm run build
 ได้ตัวติดตั้งที่ `src-tauri/target/release/bundle/nsis/`
 
 ### ออกเวอร์ชันใหม่
-แก้ `version` ใน `src-tauri/tauri.conf.json` และ `src-tauri/Cargo.toml` → เขียนบันทึกรุ่นที่ `.github/release-notes/v0.2.3.md` → commit → push tag เช่น `git tag v0.2.3 && git push origin v0.2.3`
+แก้ `version` ใน `src-tauri/tauri.conf.json` และ `src-tauri/Cargo.toml` → เขียนบันทึกรุ่นที่ `.github/release-notes/v0.3.1.md` → commit → push tag เช่น `git tag v0.3.1 && git push origin v0.3.1`
 GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ สร้างตัวติดตั้ง แล้วแนบใน release ชื่อ `tokbat_x64-setup.exe` (ชื่อคงที่ ปุ่มดาวน์โหลดบนหน้าเว็บจึงลิงก์ตรงได้)
 
 ## พัฒนา
@@ -49,6 +51,15 @@ GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ 
 `web/img/chars/character-*.svg` ส่งออกจาก Figma (ลายแปรง GRINDHOUSE) → `python tools/split_mascots.py`
 แยกเป็นชิ้น (`p-fig › p-face › p-eye-l › p-pupil` ฯลฯ) ลง `web/img/chars/anim/` แล้ว `web/css/mascots.css` ทำให้ขยับ
 (กะพริบตา กลอกตา หายใจ โบกมือ zz ไอน้ำ กระดาษสี) — ถ้าวาดตัวละครใหม่ใน Figma ต้องแก้ `SPEC` ในสคริปต์ให้ตรงลำดับเลเยอร์
+
+### สวนสัตว์เลี้ยง
+- กติกาทั้งหมดอยู่ฝั่ง Rust (`src-tauri/src/game.rs`): ค่าแรงคิดใหม่จากช่วงเวลาทุกครั้ง (ไม่เก็บ) + สมุดเหรียญ `coin_ledger`
+  ได้เหรียญเฉพาะ `sessions.source` = `timer` หรือ `manual` ที่กรอกภายใน 7 วัน ตั้งแต่วันที่เริ่มเกม (`import` และ `legacy` = 0) — เทสต์ใน `tests/game.rs`
+- ภาพอยู่ใน `web/garden/base/` (ส่งออกจาก Figma section `ของตกแต่ง (props) · คอลเลกชัน · Approved` และ `ลานหญ้า + สัตว์เลี้ยง · Direction · Approved`
+  พร้อมลายแปรง) · `manifest.json` คือแคตตาล็อก (ราคา ความหายาก ที่นอน ที่หลบฝน) ที่ทั้งหน้าจอและ Rust อ่าน
+- ชิ้นส่วนสัตว์เป็น class ตามชื่อเลเยอร์ใน Figma (`leg-*`, `tail`, `head`, `eye-l` …) → `web/css/garden.css` ทำให้เดิน กระดิกหาง กะพริบตา
+- หน้าจอ: `web/js/views/{garden,shop,adopt}.js`, `web/js/garden/{stage,decorate,weather,art}.js`
+- ดูอากาศแต่ละแบบ: `http://127.0.0.1:5177/#/garden?sky=day|night|rain|night-rain`
 
 ### หน้าเว็บ (GitHub Pages จากโฟลเดอร์ `docs/`)
 - ขึ้นเว็บอัตโนมัติด้วย `.github/workflows/pages.yml` ทุกครั้งที่ push การแก้ใน `docs/` ไป main (ตั้งค่า repo: Pages → Source = GitHub Actions)
@@ -69,6 +80,7 @@ src-tauri/
   src/api.rs            เมธอดที่หน้าจอเรียก (คืน JSON) ชื่อ/รูปแบบเดียวกับ Python เดิม
   src/repo.rs           อ่าน/เขียน SQLite · ตรวจเวลาทับกัน
   src/db.rs             schema + migration (PRAGMA user_version)
+  src/game.rs           สวนสัตว์เลี้ยง: เหรียญ เควสต์ บัตรสะสม กล่องของขวัญ ร้านค้า สัตว์ การจัดลาน
   src/timecalc.rs       คณิตเวลา: ข้ามวัน, ทศนิยม half-up, ทับกัน
   src/thaidate.rs       วันที่ไทย พ.ศ. · รอบตัดยอด
   src/report.rs         ตัวเลขรายงาน + หน้า A4 (templates/report.html, minijinja)

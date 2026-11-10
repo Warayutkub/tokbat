@@ -257,8 +257,12 @@ class PetActor {
     const bob = div("g-bob");
     bob.append(svg);
     this.flip.append(bob);
-    this.tag = div("g-tag");
-    this.tag.innerHTML = `<b></b><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 20C5 15 3 11.5 3 8.6 3 6 5 4 7.4 4c2 0 3.6 1.3 4.6 3 1-1.7 2.6-3 4.6-3C19 4 21 6 21 8.6c0 2.9-2 6.4-9 11.4z" fill="#FFA8B8" stroke="#22304A" stroke-width="1.6"/></svg>`;
+    this.tag = document.createElement("button");
+    this.tag.type = "button";
+    this.tag.className = "g-tag";
+    this.tag.title = "ดูและเปลี่ยนชื่อ";
+    this.tag.innerHTML = `<b></b><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 20C5 15 3 11.5 3 8.6 3 6 5 4 7.4 4c2 0 3.6 1.3 4.6 3 1-1.7 2.6-3 4.6-3C19 4 21 6 21 8.6c0 2.9-2 6.4-9 11.4z" fill="#FFA8B8" stroke="#22304A" stroke-width="1.6"/></svg><svg class="g-tag__edit" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z" fill="none" stroke="#66758F" stroke-width="2" stroke-linejoin="round"/></svg>`;
+    this.tag.addEventListener("click", (e) => { e.stopPropagation(); stage.onPet?.(this); });
     this.tag.querySelector("b").textContent = row.name;
     this.zz = div("g-zz");
     this.zz.textContent = "z z";

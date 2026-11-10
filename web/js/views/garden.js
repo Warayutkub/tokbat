@@ -1,7 +1,7 @@
 // บ้าน — the garden: pets living in it, a slim HUD (today's work, quests, punch card), rewards and decorating.
 import { call } from "../api.js";
 import { h, raw, icon, button, toast, showDialog, mascot, hm, fmtHours } from "../ui.js";
-import { manifest, coinSvg, pawSvg, RARITY, itemSvg } from "../garden/art.js";
+import { manifest, coinSvg, pawSvg, RARITY, itemSvg, petSvg, SPECIES } from "../garden/art.js";
 import { Stage, ZOOMS } from "../garden/stage.js";
 import { skyAt } from "../garden/weather.js";
 import { startDecorate } from "../garden/decorate.js";
@@ -39,6 +39,7 @@ export async function render(root, params, ctx) {
   async function sky() { await stage.setSky(pinned || skyAt(new Date(), st.rain)); }
   if (pinned) window.__garden = stage; // with ?sky=… the stage is reachable from the console, to step the pets by hand
   await Promise.all([sky(), stage.setItems(st.items), stage.setPets(st.pets)]);
+  stage.onPet = (actor) => petDialog(actor);
 
   // ---------------------------------------------------------------- HUD
   function workPill() {
@@ -109,6 +110,36 @@ export async function render(root, params, ctx) {
     if (!r.ok) return toast(r.error?.message || "หยุดงานไม่ได้", { error: true, action: "ไปหน้าบันทึกเวลา", onAction: () => { location.hash = "#/log"; } });
     toast(`บันทึกช่วง ${r.session.start}–${r.session.end} แล้ว · ${fmtHours(r.session.minutes, unit())} ชม.`);
     refresh();
+  }
+
+  // ---------------------------------------------------------------- a pet up close: who it is, rename it
+  async function petDialog(actor) {
+    const p = actor.row;
+    const look = m.pets.find((x) => x.species === p.species && x.color === p.color);
+    const since = new Date(p.adopted_at.replace(" ", "T"));
+    const days = Math.max(0, Math.floor((Date.now() - since.getTime()) / 86400000));
+    const art = h("div.pet-card__art");
+    art.append(await petSvg(p.species, p.color));
+    const input = h("input", { value: p.name, maxlength: 12, "aria-label": "ชื่อ" });
+    const err = h("p.field__help.field__help--error", { role: "alert" });
+    const save = async () => {
+      const r = await call("pet_rename", p.id, input.value);
+      if (!r.ok) { err.textContent = r.error.message; return; }
+      p.name = r.pet.name;
+      actor.tag.querySelector("b").textContent = p.name;
+      actor.el.title = p.name;
+      const row = st.pets.find((x) => x.id === p.id);
+      if (row) row.name = p.name;
+      close();
+      toast(`ตั้งชื่อใหม่เป็น ${p.name} แล้ว`);
+    };
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
+    const close = showDialog(h("div.dialog__panel.sketch.sketch--card.pet-card", { role: "document" }, art,
+      h("h2.dialog__title", {}, p.name),
+      h("p.hint", { style: { fontSize: "14px" } }, `${SPECIES[p.species]}สี${look?.colorName || ""} · ${days ? `อยู่ด้วยกันมา ${days} วัน` : "เพิ่งมาอยู่ด้วยวันนี้"}`),
+      h("label.field", {}, h("span.field__label", {}, "เปลี่ยนชื่อ"), h("span.input.sketch", {}, input), err),
+      h("div.dialog__actions", {}, button("ปิด", { onclick: () => close() }), button("บันทึกชื่อ", { kind: "primary", onclick: save }))));
+    input.select();
   }
 
   // ---------------------------------------------------------------- quests
