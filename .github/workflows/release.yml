@@ -1,4 +1,5 @@
 # Push a tag like v0.2.2 → tests, the Windows installer, and a GitHub release with it attached.
+# Release text comes from .github/release-notes/<tag>.md (write it before tagging).
 # The landing page links to releases/latest/download/tokbat_x64-setup.exe, so that asset name never changes.
 name: Release
 
@@ -15,11 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Tag matches the app version
+      - name: Tag matches the app version, and has release notes
         shell: pwsh
         run: |
           $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
           if ("v$($conf.version)" -ne "${{ github.ref_name }}") { throw "tag ${{ github.ref_name }} but tauri.conf.json says $($conf.version)" }
+          if (-not (Test-Path ".github/release-notes/${{ github.ref_name }}.md")) { throw "write .github/release-notes/${{ github.ref_name }}.md first" }
 
       - uses: actions/setup-node@v4
         with:
@@ -41,17 +43,13 @@ jobs:
         run: |
           $exe = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
           Copy-Item $exe.FullName tokbat_x64-setup.exe
-          (Get-FileHash tokbat_x64-setup.exe -Algorithm SHA256).Hash | Out-File -Encoding ascii tokbat_x64-setup.exe.sha256
+          $hash = (Get-FileHash tokbat_x64-setup.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  tokbat_x64-setup.exe" | Out-File -Encoding ascii tokbat_x64-setup.exe.sha256
 
       - uses: softprops/action-gh-release@v2
         with:
           name: ตอกบัตร ${{ github.ref_name }}
-          body: |
-            ดาวน์โหลด **tokbat_x64-setup.exe** แล้วเปิดเพื่อติดตั้ง (Windows 10/11, ไม่ต้องใช้สิทธิ์แอดมิน)
-            ถ้า Windows ขึ้นหน้าจอสีน้ำเงินเตือน กด More info แล้วกด Run anyway — ตัวติดตั้งยังไม่ได้เซ็นรับรอง
-            ข้อมูลเดิมใน Documents\ตอกบัตร ใช้ต่อได้เลย
-
-            หน้าเว็บ: https://warayutkub.github.io/tokbat/
+          body_path: .github/release-notes/${{ github.ref_name }}.md
           files: |
             tokbat_x64-setup.exe
             tokbat_x64-setup.exe.sha256

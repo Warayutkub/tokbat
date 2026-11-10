@@ -33,7 +33,7 @@ npm run build
 ได้ตัวติดตั้งที่ `src-tauri/target/release/bundle/nsis/`
 
 ### ออกเวอร์ชันใหม่
-แก้ `version` ใน `src-tauri/tauri.conf.json` และ `src-tauri/Cargo.toml` → commit → push tag เช่น `git tag v0.2.3 && git push origin v0.2.3`
+แก้ `version` ใน `src-tauri/tauri.conf.json` และ `src-tauri/Cargo.toml` → เขียนบันทึกรุ่นที่ `.github/release-notes/v0.2.3.md` → commit → push tag เช่น `git tag v0.2.3 && git push origin v0.2.3`
 GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ สร้างตัวติดตั้ง แล้วแนบใน release ชื่อ `tokbat_x64-setup.exe` (ชื่อคงที่ ปุ่มดาวน์โหลดบนหน้าเว็บจึงลิงก์ตรงได้)
 
 ## พัฒนา
