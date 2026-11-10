@@ -56,5 +56,16 @@
         }
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYwQTBFREM1QzUyM0YwQTYKUldTbThDUEZ4ZTJnWUw2dlpUWk5aY0lUZHR6OTRvMzUwY3NCYXQ1eVBUTjVQMk5RYXlmSC9rbHEK",
+      "endpoints": [
+        "https://github.com/Warayutkub/tokbat/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

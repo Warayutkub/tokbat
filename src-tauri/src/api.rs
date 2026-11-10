@@ -130,7 +130,7 @@ impl Api {
         let cutoff = s.get("cutoff_day").and_then(Value::as_i64).unwrap_or(20);
         let pattern = st(&s, "title_pattern", "{เดือน}/{ปี}").to_string();
         Ok(match method {
-            "bootstrap" => json!({"today": iso(self.today()), "settings": s, "count": repo.count(), "open_session": repo.open_session()}),
+            "bootstrap" => json!({"today": iso(self.today()), "settings": s, "count": repo.count(), "open_session": repo.open_session(), "version": env!("CARGO_PKG_VERSION")}),
 
             "day" => {
                 let d = arg_date(args, 0)?;

@@ -38,6 +38,13 @@ npm run build
 แก้ `version` ใน `src-tauri/tauri.conf.json` และ `src-tauri/Cargo.toml` → เขียนบันทึกรุ่นที่ `.github/release-notes/v0.3.1.md` → commit → push tag เช่น `git tag v0.3.1 && git push origin v0.3.1`
 GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ สร้างตัวติดตั้ง แล้วแนบใน release ชื่อ `tokbat_x64-setup.exe` (ชื่อคงที่ ปุ่มดาวน์โหลดบนหน้าเว็บจึงลิงก์ตรงได้)
 
+### อัปเดตแอปอัตโนมัติ (ตั้งแต่ 0.3.0)
+- แอปเช็ก `releases/latest/download/latest.json` วันละครั้ง (ตั้งค่า › เวอร์ชันแอป) ถ้ามีเวอร์ชันใหม่จะถามก่อน แล้วติดตั้งแบบเห็นแถบความคืบหน้าและเปิดตัวใหม่ให้
+- ตัวติดตั้งต้องเซ็นด้วยกุญแจอัปเดต: กุญแจลับอยู่ที่ `%USERPROFILE%\.tokbat\updater.key` (สร้างด้วย `npx tauri signer generate`) กุญแจสาธารณะอยู่ใน `tauri.conf.json › plugins.updater.pubkey`
+- ก่อน push tag ต้องมี repo secret **`TAURI_SIGNING_PRIVATE_KEY`** (เนื้อไฟล์ updater.key) และ **`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`** (ว่างได้) — ไม่มีแล้ว workflow จะหยุดตั้งแต่ขั้นแรก
+- CI build ด้วย `--config src-tauri/tauri.release.conf.json` (เปิด `createUpdaterArtifacts`) แล้วสร้าง `latest.json` แนบใน release; `npm run build` ในเครื่องไม่ต้องใช้กุญแจ
+- สำรองกุญแจทั้งสอง (updater.key และ pack-signing.key) ไว้ที่ปลอดภัย ถ้าหาย เครื่องที่ติดตั้งไปแล้วจะอัปเดตเองไม่ได้ ต้องดาวน์โหลดตัวติดตั้งใหม่เอง
+
 ## พัฒนา
 ต้องมี Rust (stable) + Node.js
 - `npm run serve` — เปิดหน้าจอในเบราว์เซอร์ธรรมดาที่ http://127.0.0.1:5177 ข้อมูลไปที่ `.dev-data/` (ไม่แตะข้อมูลจริง)

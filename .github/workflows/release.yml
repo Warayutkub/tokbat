@@ -1,6 +1,8 @@
 # Push a tag like v0.2.2 → tests, the Windows installer, and a GitHub release with it attached.
 # Release text comes from .github/release-notes/<tag>.md (write it before tagging).
 # The landing page links to releases/latest/download/tokbat_x64-setup.exe, so that asset name never changes.
+# The app updates itself from releases/latest/download/latest.json: the installer is signed with the updater key
+# (repo secrets TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD; the public half is in tauri.conf.json).
 name: Release
 
 on:
@@ -22,6 +24,9 @@ jobs:
           $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
           if ("v$($conf.version)" -ne "${{ github.ref_name }}") { throw "tag ${{ github.ref_name }} but tauri.conf.json says $($conf.version)" }
           if (-not (Test-Path ".github/release-notes/${{ github.ref_name }}.md")) { throw "write .github/release-notes/${{ github.ref_name }}.md first" }
+          if ($env:HAS_KEY -ne 'true') { throw "add the repo secret TAURI_SIGNING_PRIVATE_KEY (the updater key) before tagging" }
+        env:
+          HAS_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
 
       - uses: actions/setup-node@v4
         with:
@@ -35,8 +40,11 @@ jobs:
       - run: npm ci
       - name: Tests (includes real PDF/PNG export through Edge)
         run: cargo test --manifest-path src-tauri/Cargo.toml
-      - name: Build the installer
-        run: npx tauri build
+      - name: Build the installer (signed for the updater)
+        run: npx tauri build --config src-tauri/tauri.release.conf.json
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Name the installer
         shell: pwsh
@@ -45,6 +53,16 @@ jobs:
           Copy-Item $exe.FullName tokbat_x64-setup.exe
           $hash = (Get-FileHash tokbat_x64-setup.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  tokbat_x64-setup.exe" | Out-File -Encoding ascii tokbat_x64-setup.exe.sha256
+          # what the app's updater reads: version, signature of this exact installer, where to download it
+          $sig = Get-Content "$($exe.FullName).sig" -Raw
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $latest = [ordered]@{
+            version   = $version
+            notes     = "ตอกบัตร $version"
+            pub_date  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{ "windows-x86_64" = @{ signature = $sig.Trim(); url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/tokbat_x64-setup.exe" } }
+          }
+          $latest | ConvertTo-Json -Depth 5 | Out-File -Encoding utf8NoBOM latest.json
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -53,3 +71,4 @@ jobs:
           files: |
             tokbat_x64-setup.exe
             tokbat_x64-setup.exe.sha256
+            latest.json

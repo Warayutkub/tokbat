@@ -30,6 +30,7 @@ pub fn default_settings() -> Map<String, Value> {
         "rain": true,
         "game_started": "",
         "auto_packs": true,
+        "auto_update": true,
         "shop_seen_at": ""
     });
     v.as_object().unwrap().clone()

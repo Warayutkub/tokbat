@@ -3,6 +3,7 @@ import { call } from "../api.js";
 import { h, raw, icon, button, chip, toast, confirmDialog, mascot, busy, debounce } from "../ui.js";
 import { importCsv } from "./importer.js";
 import { checkPacks } from "../garden/packs.js";
+import { checkUpdate, canUpdate } from "../update.js";
 
 export async function render(root, params, ctx) {
   let s = ctx.settings;
@@ -67,6 +68,12 @@ export async function render(root, params, ctx) {
         h("div.import-box", {}, h("div.grow", {}, h("b", { style: { font: "var(--text-title)", fontSize: "14px" } }, "นำเข้าจาก Google Sheets (CSV)"),
           h("p.hint", { style: { fontSize: "12px" } }, "ดึงข้อมูลเก่ามาได้เลย: วันที่ · เวลาเริ่ม · เวลาหยุด · หมายเหตุ")),
           button("เลือกไฟล์ CSV", { icon: "upload", small: true, onclick: async () => { if (await importCsv()) refresh(); } }))),
+      card("เวอร์ชันแอป", "download",
+        h("p.hint", { style: { fontSize: "13px" } }, `ตอกบัตร ${ctx.version || ""}`),
+        canUpdate()
+          ? [sw("อัปเดตแอปอัตโนมัติ", "เช็กวันละครั้งตอนต่อเน็ต ถ้ามีเวอร์ชันใหม่จะถามก่อนติดตั้ง · ตัวติดตั้งต้องมีลายเซ็นของผู้สร้างแอป", "auto_update"),
+            h("div.chips", {}, button("เช็กอัปเดตตอนนี้", { icon: "download", small: true, onclick: (e) => busy(e.currentTarget, () => checkUpdate({ force: true, quiet: false })) }))]
+          : h("p.hint", { style: { fontSize: "12px" } }, "อัปเดตได้เฉพาะในแอปที่ติดตั้งแล้ว")),
       card("หน้าตา", "sliders",
         sw("แสดงตัวการ์ตูน", "ชอล์กกับแปรงลบ ในหน้าแอปและมุมไฟล์ส่งออก", "show_characters"),
         h("div.cast", {}, ...["idle", "write", "break", "done", "eraser"].map((p) => mascot(p, 62)))),

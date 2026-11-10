@@ -102,6 +102,30 @@ async fn api(state: tauri::State<'_, Arc<Api>>, method: String, args: Vec<Value>
     .map_err(|e| e.to_string())?
 }
 
+// ---------- app updates (Tauri updater; releases/latest/download/latest.json, signed in CI) ----------
+
+/// {available, version, notes} or {available: false}. Errors (offline, no release yet) come back as Err text.
+#[tauri::command]
+async fn update_check(app: AppHandle) -> Result<Value, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let current = app.package_info().version.to_string();
+    match app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())? {
+        Some(u) => Ok(json!({"available": true, "current": current, "version": u.version, "notes": u.body})),
+        None => Ok(json!({"available": false, "current": current})),
+    }
+}
+
+/// Downloads the signed installer, runs it (Windows closes the app for that) and opens the new version.
+#[tauri::command]
+async fn update_install(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let Some(u) = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())? else {
+        return Err("ไม่มีเวอร์ชันใหม่แล้ว".into());
+    };
+    u.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    app.restart();
+}
+
 // ---------- self-test: `tokbat.exe --selftest <folder>` runs a hidden window on throwaway data ----------
 
 struct Selftest {
@@ -124,6 +148,8 @@ const SELFTEST_JS: &str = r##"
     location.hash = "#/report?kind=custom&start=2026-09-01&end=2026-09-02";
     await sleep(2500);
     res.report_total = document.querySelector(".big")?.textContent;
+    // the updater is set up (key + endpoint); before the first signed release the endpoint has no latest.json yet
+    res.update = await window.__TAURI__.core.invoke("update_check").then((r) => `ok available=${r.available}`, (e) => `err ${e}`);
   } catch (e) {
     res.error = String((e && e.stack) || e);
   }
@@ -189,7 +215,8 @@ pub fn run(selftest_out: Option<PathBuf>) {
     };
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![api, selftest])
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![api, selftest, update_check, update_install])
         .on_page_load(|webview, payload| {
             if payload.event() != PageLoadEvent::Finished {
                 return;
