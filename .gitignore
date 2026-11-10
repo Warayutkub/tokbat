@@ -1,0 +1,15 @@
+.dev-data/
+__pycache__/
+*.pyc
+build/
+dist/
+.pytest_cache/
+.wara/
+build-assets/preview-256.png
+.venv-build/
+build-log.txt
+dist-next/
+build-next/
+node_modules/
+src-tauri/target/
+src-tauri/gen/

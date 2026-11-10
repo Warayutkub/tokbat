@@ -1,0 +1,70 @@
+/* Design tokens — mirror of Figma "work-time" › section "ตอกบัตร · Foundations · Approved".
+   Written by hand: get_tokens only reads a *page* named Foundations, and this file keeps Foundations in a section. */
+:root {
+  /* color */
+  --color-bg: #EDF3FB;
+  --color-surface: #FFFFFF;
+  --color-ink: #22304A;
+  --color-muted: #66758F;
+  --color-dim: #A3AEC2;
+  --color-border: #D6DEEB;
+  --color-zebra: #F4F7FC;
+  --color-accent: #FFE07A;
+  --color-accent-soft: #FFF5CF;
+  --color-accent-text: #A87700;
+  --color-work: #9CC9FF;
+  --color-work-soft: #E3EFFF;
+  --color-work-text: #2463C8;
+  --color-night: #4F86E8;
+  --color-night-soft: #E3ECF8;
+  --color-night-text: #3D5C8F;
+  --color-break: #FFA8B8;
+  --color-break-soft: #FFE8EC;
+  --color-break-text: #CF4468;
+  --color-danger: #D9434E;
+  --color-danger-soft: #FDE7E9;
+  --color-danger-line: #A92F39;
+  --color-disabled: #E6EBF3;
+  --color-scrim: rgb(34 48 74 / 0.45);
+
+  /* spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-box: 14px;
+  --radius-card: 18px;
+  --radius-full: 999px;
+
+  /* shadow */
+  --shadow-sm: 0 6px 16px rgb(34 48 74 / 0.12);
+  --shadow-md: 0 10px 30px rgb(34 48 74 / 0.2);
+
+  /* hand-drawn line widths */
+  --stroke-card: 2.2px;
+  --stroke-control: 1.6px;
+
+  /* type — IBM Plex Sans Thai Looped everywhere */
+  --font: "Looped", "Leelawadee UI", system-ui, sans-serif;
+  --text-number-xl: 600 64px/1.1 var(--font);
+  --text-number-lg: 600 44px/1.15 var(--font);
+  --text-h1: 600 26px/1.25 var(--font);
+  --text-h2: 600 19px/1.3 var(--font);
+  --text-title: 600 15px/1.45 var(--font);
+  --text-body: 400 15px/1.5 var(--font);
+  --text-body-sm: 400 13px/1.5 var(--font);
+  --text-caption: 400 12px/1.45 var(--font);
+
+  /* motion */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}

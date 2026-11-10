@@ -1,0 +1,8 @@
+pywebview>=6.2
+Jinja2>=3.1
+PyMuPDF>=1.24
+Pillow>=10
+
+# dev
+pytest>=8
+pyinstaller>=6.10

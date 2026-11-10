@@ -1,0 +1,34 @@
+[package]
+name = "tokbat"
+version = "0.2.2"
+description = "ตอกบัตร — บันทึกเวลาทำงานบนเครื่อง"
+authors = ["Wara"]
+edition = "2024"
+rust-version = "1.90"
+
+[lib]
+name = "tokbat_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.5", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+rusqlite = { version = "0.37", features = ["bundled", "backup"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+minijinja = { version = "2", features = ["loader"] }
+csv = "1.3"
+encoding_rs = "0.8"
+dirs = "7"
+tiny_http = "0.12"
+rand = "0.9"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

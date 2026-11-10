@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<style>
+  @font-face { font-family: "Looped"; src: url("{{ font_base }}IBMPlexSansThaiLooped-Regular.ttf"); font-weight: 400; }
+  @font-face { font-family: "Looped"; src: url("{{ font_base }}IBMPlexSansThaiLooped-Medium.ttf"); font-weight: 500; }
+  @font-face { font-family: "Looped"; src: url("{{ font_base }}IBMPlexSansThaiLooped-SemiBold.ttf"); font-weight: 600; }
+  @page { size: A4; margin: 14mm 12mm 16mm; }
+  :root { --ink: #22304A; --muted: #66758F; --border: #D6DEEB; --zebra: #F4F7FC; --work-soft: #E3EFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: "Looped", sans-serif; color: var(--ink); font-size: 12px; line-height: 1.45; width: 186mm; }
+  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 14px; }
+  .head h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+  .head .sub { color: var(--muted); font-size: 13px; }
+  .head .meta { color: var(--muted); font-size: 12px; }
+  .total { display: flex; align-items: center; gap: 12px; }
+  .total-box { background: var(--work-soft); border-radius: 14px; padding: 10px 16px; text-align: right; }
+  .total-box .k { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .total-box .v { font-size: 26px; font-weight: 600; line-height: 1.15; }
+  .total-box .v small { font-size: 13px; }
+  .total-box .hm { font-size: 11px; color: var(--muted); }
+  .mascot svg { width: 64px; height: 64px; display: block; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  thead { display: table-header-group; }
+  th { background: var(--ink); color: #fff; font-weight: 600; text-align: left; padding: 7px 12px; font-size: 12px; white-space: nowrap; }
+  td { padding: 4px 12px; vertical-align: top; }
+  tbody tr:nth-child(even) td { background: var(--zebra); }
+  tr { break-inside: avoid; }
+  .c-hours { text-align: center; font-weight: 600; white-space: nowrap; }
+  .c-start, .c-end, .c-break, .c-date { white-space: nowrap; }
+  td.c-note { color: #3A465C; font-size: 11.5px; }
+  .same-day { color: var(--muted); }
+  tfoot td { background: var(--work-soft); font-weight: 600; padding: 8px 12px; font-size: 13px; }
+  tfoot .hm { font-weight: 400; color: var(--muted); font-size: 12px; text-align: right; }
+  .foot { margin-top: 12px; font-size: 11.5px; }
+  .printed { margin-top: 18px; display: flex; justify-content: space-between; color: var(--muted); font-size: 10.5px; }
+  .empty { padding: 24px; text-align: center; color: var(--muted); }
+  @media screen { html { background: #fff; } body { margin: 14mm 12mm 16mm; } }
+</style>
+</head>
+<body>
+  <header class="head">
+    <div>
+      <h1>{{ title }}</h1>
+      <div class="sub">รายงานชั่วโมงทำงาน · {{ rep.label }}</div>
+      <div class="meta">{{ rep.days }} วัน · {{ rep.sessions }} ช่วงเวลา{% if rep.overnight %} · ข้ามวัน {{ rep.overnight }} ช่วง{% endif %}</div>
+    </div>
+    <div class="total">
+      <div class="total-box">
+        <div class="k">รวมทั้งหมด</div>
+        <div class="v">{{ rep.total }} <small>ชม.</small></div>
+        <div class="hm">= {{ rep.total_hm }}</div>
+      </div>
+      {% if mascot_svg %}<div class="mascot">{{ mascot_svg | safe }}</div>{% endif %}
+    </div>
+  </header>
+
+  <table>
+    <thead><tr>{% for c in cols %}<th class="c-{{ c }}">{{ labels[c] }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for r in rep.rows %}
+      <tr>
+        {% for c in cols %}
+          {% if c == "date" %}<td class="c-date{% if r.same_day %} same-day{% endif %}">{{ r.date_slash }}</td>
+          {% elif c == "start" %}<td class="c-start">{{ r.start }}</td>
+          {% elif c == "end" %}<td class="c-end">{{ r.end }}</td>
+          {% elif c == "break" %}<td class="c-break">{{ r.break_text }}</td>
+          {% elif c == "hours" %}<td class="c-hours">{{ r.hours_text }}</td>
+          {% elif c == "note" %}<td class="c-note">{{ r.note }}</td>{% endif %}
+        {% endfor %}
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="{{ cols | length }}">ช่วงนี้ไม่มีเวลาที่บันทึก</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr>
+      <td>รวม</td>
+      <td colspan="{{ mid_span }}">จำนวนทั้งหมด : {{ rep.total }}</td>
+      {% if cols | length > 2 %}<td class="hm">({{ rep.total_hm }})</td>{% endif %}
+    </tr></tfoot>
+  </table>
+
+  {% if footnote and unit_note %}
+  <p class="foot">*หมายเหตุ หน่วยเป็นทศนิยม ไม่ใช่นาที ตัวอย่าง 2.50 คือ 2 ชั่วโมง 30 นาที</p>
+  {% endif %}
+  {% if timestamp %}
+  <div class="printed"><span>พิมพ์เมื่อ {{ timestamp }} · สร้างจากแอปตอกบัตร</span><span>{{ title }}</span></div>
+  {% endif %}
+  <script>document.fonts.ready.then(() => document.documentElement.setAttribute("data-height", Math.ceil(document.documentElement.scrollHeight)));</script>
+</body>
+</html>

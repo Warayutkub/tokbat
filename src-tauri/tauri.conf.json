@@ -1,0 +1,60 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "ตอกบัตร",
+  "mainBinaryName": "tokbat",
+  "version": "0.2.2",
+  "identifier": "app.tokbat.desktop",
+  "build": {
+    "frontendDist": "../web"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ตอกบัตร",
+        "url": "index.html",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 1120,
+        "minHeight": 740,
+        "resizable": true,
+        "center": true,
+        "visible": false,
+        "dragDropEnabled": false,
+        "backgroundColor": "#EDF3FB",
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --lang=th"
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "บันทึกเวลาทำงานบนเครื่อง — ข้อมูลอยู่ในเครื่องเท่านั้น",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "languages": [
+          "Thai",
+          "English"
+        ],
+        "customLanguageFiles": {
+          "Thai": "nsis/Thai.nsh"
+        }
+      }
+    }
+  }
+}

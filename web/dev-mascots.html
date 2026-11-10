@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ตอกบัตร · mascot motion check</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/mascots.css">
+<style>
+  body { overflow: auto; padding: 24px; gap: 16px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 24px; }
+  figure { margin: 0; background: #fff; border-radius: 18px; padding: 16px; text-align: center; font: var(--text-body-sm); }
+  .debug .p-pupil path, .debug .p-lid path { fill: #e11 !important; }
+  .debug .p-arm-r path, .debug .p-arm-l path { fill: #16a !important; }
+  .debug .p-legs path { fill: #a0a !important; }
+  .debug .p-z1 path, .debug .p-z2 path, .debug .p-steam path { fill: #0a5 !important; }
+  .debug .p-conf path, .debug .p-hands path { fill: #f80 !important; }
+  .debug .p-trail path { fill: #0aa !important; }
+</style>
+</head>
+<body>
+  <label><input type="checkbox" onchange="document.body.classList.toggle('debug', this.checked)"> แสดงสีแยกชิ้น (debug)</label>
+  <div class="grid" id="g"></div>
+  <script type="module">
+    import { mascot } from "./js/ui.js";
+    const g = document.getElementById("g");
+    for (const p of ["idle", "write", "break", "done", "peek", "eraser"]) {
+      const f = document.createElement("figure");
+      f.append(mascot(p, 200), Object.assign(document.createElement("figcaption"), { textContent: p }));
+      g.append(f);
+    }
+  </script>
+</body>
+</html>

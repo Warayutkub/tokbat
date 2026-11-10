@@ -1,0 +1,14 @@
+{
+  "name": "tokbat",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "serve": "cargo run --manifest-path src-tauri/Cargo.toml -- --serve 5177",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4"
+  }
+}
