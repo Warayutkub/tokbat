@@ -13,14 +13,18 @@
     el.style.setProperty("--d", `-${(Math.random() * 6).toFixed(2)}s`);
     loadSvg(el.dataset.pose).then((svg) => { el.innerHTML = svg; });
   };
-  const mascots = document.querySelectorAll(".mascot[data-pose]");
+  // the ones in the header and hero are on screen from the start; the rest wait until they come near
+  const mascots = [...document.querySelectorAll(".mascot[data-pose]")];
+  const eager = mascots.filter((m) => m.closest(".site-header, .hero"));
+  eager.forEach(hydrate);
+  const lazy = mascots.filter((m) => !eager.includes(m));
   if ("IntersectionObserver" in window) {
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) { io.unobserve(e.target); hydrate(e.target); }
     }, { rootMargin: "300px 0px" });
-    mascots.forEach((m) => io.observe(m));
+    lazy.forEach((m) => io.observe(m));
   } else {
-    mascots.forEach(hydrate);
+    lazy.forEach(hydrate);
   }
 
   // ---------- hero: start once the fonts are in, so lines never jump ----------
