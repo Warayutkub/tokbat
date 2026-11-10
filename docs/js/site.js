@@ -94,6 +94,35 @@
     document.querySelectorAll("main section[id]").forEach((s) => so.observe(s));
   }
 
+  // ---------- newest release from GitHub (same idea as the wridge site): version, size, date, direct download ----------
+  // The page ships with the current numbers and Releases-page links, so nothing breaks if the API is slow,
+  // rate-limited (60 calls/hour per visitor) or there is no release yet.
+  const KEY = "tokbat-latest";
+  const applyRelease = (r) => {
+    document.querySelectorAll("[data-download]").forEach((a) => { a.href = r.url; });
+    document.querySelectorAll("[data-version]").forEach((el) => { el.textContent = r.version; });
+    document.querySelectorAll("[data-size]").forEach((el) => { el.textContent = r.size; });
+    document.querySelectorAll("[data-date]").forEach((el) => { el.textContent = r.date; });
+    document.querySelectorAll("[data-date-wrap]").forEach((el) => { el.hidden = !r.date; });
+  };
+  try { const c = JSON.parse(sessionStorage.getItem(KEY)); if (c) applyRelease(c); } catch { /* storage blocked */ }
+  fetch("https://api.github.com/repos/Warayutkub/tokbat/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((rel) => {
+      const exe = rel.assets?.find((a) => /setup\.exe$/i.test(a.name));
+      if (!exe) return;
+      const when = new Date(rel.published_at || exe.updated_at);
+      const r = {
+        url: exe.browser_download_url,
+        version: rel.tag_name.replace(/^v/, ""),
+        size: `${(exe.size / 1048576).toFixed(1)} MB`,
+        date: isNaN(when) ? "" : when.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }),
+      };
+      applyRelease(r);
+      try { sessionStorage.setItem(KEY, JSON.stringify(r)); } catch { /* storage blocked */ }
+    })
+    .catch(() => { /* keep the Releases page link and the numbers in the HTML */ });
+
   // ---------- screenshot tabs (WAI-ARIA tabs: click, arrows, Home/End) ----------
   const tabs = [...document.querySelectorAll('[role="tab"]')];
   function select(tab, focus = false) {
