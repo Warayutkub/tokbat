@@ -23,7 +23,8 @@
   <link rel="preload" href="fonts/IBMPlexSansThaiLooped-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/tokens.css?v=ba195a51">
   <link rel="stylesheet" href="css/mascots.css?v=1f91d049">
-  <link rel="stylesheet" href="css/site.css?v=2100232b">
+  <link rel="stylesheet" href="css/garden.css?v=1f7137f1">
+  <link rel="stylesheet" href="css/site.css?v=3d6fd0c4">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -40,6 +41,7 @@
   }
   </script>
   <script>document.documentElement.classList.add("js")</script>
+  <script type="module" src="js/garden-demo.js?v=78a791f5"></script>
   <script src="js/site.js?v=82c6713f" defer></script>
 </head>
 <body>
@@ -78,6 +80,7 @@
       </a>
       <nav class="nav" aria-label="ส่วนต่างๆ ในหน้านี้">
         <a href="#features">ฟีเจอร์</a>
+        <a href="#garden">สวน</a>
         <a href="#report">รายงาน</a>
         <a href="#privacy">ข้อมูลของคุณ</a>
         <a href="#install">ติดตั้ง</a>
@@ -94,7 +97,10 @@
     <section class="hero" id="top" aria-labelledby="hero-title">
       <div class="wrap hero__grid">
         <div class="hero__text">
-          <p class="badge" data-in style="--i:0"><svg class="ico ico--sm"><use href="#i-shield"/></svg>แอป Windows · ฟรี · ไม่ต้องต่อเน็ต</p>
+          <div class="badges" data-in style="--i:0">
+            <a class="badge badge--new" href="#garden">ใหม่ใน 0.3.0 · สวนสัตว์เลี้ยง<span aria-hidden="true">→</span></a>
+            <p class="badge"><svg class="ico ico--sm"><use href="#i-shield"/></svg>แอป Windows · ฟรี · ไม่ต้องต่อเน็ต</p>
+          </div>
           <h1 id="hero-title" class="hero__title"><span class="line" data-in style="--i:1">บันทึกเวลาทำงาน</span><span class="line" data-in style="--i:2">ข้ามเที่ยงคืนก็นับถูก</span></h1>
           <p class="lead" data-in style="--i:3">กรอกเวลาเข้า–ออก หักเวลาพักให้เอง แล้วส่งออกรายงาน A4 เป็น PDF หรือ PNG หน้าตาเหมือนชีตที่ใช้อยู่ ไม่ต้องสมัคร ไม่ต้องต่อเน็ต ข้อมูลอยู่ในเครื่องคุณเท่านั้น</p>
           <div class="actions" data-in style="--i:4">
@@ -167,8 +173,42 @@
       </div>
     </section>
 
+    <!-- ---------- Garden (new in 0.3.0): a live sample, not the game ---------- -->
+    <section class="section section--white" id="garden" aria-labelledby="garden-title">
+      <div class="wrap garden">
+        <header class="section-head garden__head" data-reveal>
+          <p class="eyebrow">ใหม่ · สวนสัตว์เลี้ยง</p>
+          <h2 id="garden-title">ทำงานได้เหรียญ<br>เลี้ยงสัตว์ในลานของคุณ</h2>
+          <p class="section-head__body">เปิดแท็บ “บ้าน” เจอลานหญ้าที่มีแมว หมา กระต่ายเดินเล่นอยู่ ยิ่งจับเวลาทำงาน ก็ยิ่งได้ของมาแต่งลาน</p>
+        </header>
+        <div class="garden__demo" data-reveal="pop">
+          <div class="garden__stage g-card sketch sketch--card" data-garden>
+            <img class="garden__poster" src="img/garden-day.webp" width="1280" height="800" loading="lazy"
+                 alt="ตัวอย่างลานหญ้าในแอป: หมา กระต่าย และแมวเดินเล่นท่ามกลางต้นไม้ บ้านหมา บ้านกระต่าย บ่อน้ำ และเสื่อปิกนิก">
+          </div>
+          <div class="garden__controls">
+            <div class="chips" role="group" aria-label="เปลี่ยนเวลาและอากาศในตัวอย่าง">
+              <button type="button" class="tab sketch" data-sky="day" aria-pressed="true"><svg class="ico ico--sm"><use href="#i-check"/></svg>กลางวัน</button>
+              <button type="button" class="tab sketch" data-sky="night" aria-pressed="false"><svg class="ico ico--sm"><use href="#i-check"/></svg>กลางคืน</button>
+              <button type="button" class="tab sketch" data-sky="rain" aria-pressed="false"><svg class="ico ico--sm"><use href="#i-check"/></svg>ฝนตก</button>
+            </div>
+            <p class="garden__note">ตัวอย่าง · เล่นจริงในแอป</p>
+          </div>
+        </div>
+        <div class="garden__body">
+          <ul class="checklist" role="list">
+            <li data-reveal="tick" style="--i:0"><span class="tick"><svg class="ico ico--sm"><use href="#i-check"/></svg></span>จับเวลาด้วยปุ่มเริ่มงาน ได้ชั่วโมงละ 2 เหรียญ</li>
+            <li data-reveal="tick" style="--i:1"><span class="tick"><svg class="ico ico--sm"><use href="#i-check"/></svg></span>เควสต์รายวันและรายสัปดาห์ รับครบ 10 ครั้งได้กล่องของขวัญ</li>
+            <li data-reveal="tick" style="--i:2"><span class="tick"><svg class="ico ico--sm"><use href="#i-check"/></svg></span>ของแต่ง 45 ชิ้น สัตว์ 3 ชนิด ชนิดละ 4 สี ลากไปวางตรงไหนก็ได้</li>
+            <li data-reveal="tick" style="--i:3"><span class="tick"><svg class="ico ico--sm"><use href="#i-check"/></svg></span>กลางวันกลางคืนตามนาฬิกา ฝนตกชั่วโมงละ 15 นาที สัตว์วิ่งไปหลบเอง</li>
+          </ul>
+          <p class="badge" data-reveal style="--i:4"><svg class="ico ico--sm"><use href="#i-shield"/></svg>ไม่ใช้เงินจริง · ไม่ต้องต่อเน็ต · ปิดได้ในตั้งค่า</p>
+        </div>
+      </div>
+    </section>
+
     <!-- ---------- Report ---------- -->
-    <section class="section section--white" id="report" aria-labelledby="report-title">
+    <section class="section" id="report" aria-labelledby="report-title">
       <div class="wrap report">
         <div class="report__paper" data-reveal="drop">
           <a class="paper" href="report-sample.pdf" aria-label="เปิดดูตัวอย่างรายงาน PDF">
@@ -195,7 +235,7 @@
     </section>
 
     <!-- ---------- Screens ---------- -->
-    <section class="section" id="screens" aria-labelledby="screens-title">
+    <section class="section section--white" id="screens" aria-labelledby="screens-title">
       <div class="wrap screens">
         <header class="section-head section-head--center" data-reveal>
           <p class="eyebrow">หน้าตาในแอป</p>
@@ -203,12 +243,17 @@
           <p class="section-head__body">ทุกหน้าคุยภาษาเดียวกับชีตเวลา มีตัวการ์ตูนคอยบอกว่าตอนนี้เกิดอะไรขึ้น</p>
         </header>
         <div class="tabs" role="tablist" aria-label="ภาพหน้าจอในแอป" data-reveal>
+          <button class="tab sketch" role="tab" id="tab-home" aria-controls="panel-home" aria-selected="false" tabindex="-1">บ้าน</button>
           <button class="tab sketch" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1">บันทึกเวลา</button>
           <button class="tab sketch" role="tab" id="tab-history" aria-controls="panel-history" aria-selected="false" tabindex="-1">ประวัติ</button>
           <button class="tab sketch" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="true">รายงาน</button>
           <button class="tab sketch" role="tab" id="tab-dayoff" aria-controls="panel-dayoff" aria-selected="false" tabindex="-1">วันหยุด</button>
         </div>
         <div class="gallery" data-reveal="pop">
+          <figure class="panel" role="tabpanel" id="panel-home" aria-labelledby="tab-home" hidden>
+            <div class="frame sketch sketch--card"><img src="img/app-home.webp" width="1600" height="1000" loading="lazy" alt="หน้าบ้าน: ลานหญ้าที่มีหมา กระต่าย และแมวเดินเล่น ต้นไม้ บ้านหมา บ่อน้ำ เหรียญ 236 เหรียญ ปุ่มเควสต์ ตกแต่ง และร้านค้า"></div>
+            <figcaption>หน้าบ้าน: ลานหญ้าของคุณ เหรียญจากเวลาทำงาน เควสต์ และปุ่มแต่งลาน</figcaption>
+          </figure>
           <figure class="panel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
             <div class="frame sketch sketch--card"><img src="img/app-log.webp" width="1600" height="1000" loading="lazy" alt="หน้าบันทึกเวลา: แถบสัปดาห์ ไทม์ไลน์ 24 ชั่วโมง และสมการชั่วโมง ออกงาน − เข้างาน − พัก = ชั่วโมง"></div>
             <figcaption>หน้าบันทึกเวลา: ลากบนเส้นเวลาหรือพิมพ์เวลา แล้วแอปคิดชั่วโมงให้ทันที</figcaption>
@@ -241,7 +286,7 @@
             </header>
             <ul class="points" role="list">
               <li><svg class="ico ico--lg"><use href="#i-userx"/></svg><div><h3>ไม่มีบัญชี ไม่ต้องล็อกอิน</h3><p>เปิดแอปแล้วใช้ได้เลย ไม่มีใครเห็นเวลาของคุณ</p></div></li>
-              <li><svg class="ico ico--lg"><use href="#i-cloudoff"/></svg><div><h3>ไม่ส่งข้อมูลออกนอกเครื่อง</h3><p>ใช้ได้แม้ไม่มีอินเทอร์เน็ต</p></div></li>
+              <li><svg class="ico ico--lg"><use href="#i-cloudoff"/></svg><div><h3>ไม่ส่งข้อมูลออกนอกเครื่อง</h3><p>ใช้ได้แม้ไม่มีเน็ต ต่อเน็ตแค่เช็กอัปเดตกับของใหม่ ซึ่งปิดได้</p></div></li>
               <li><svg class="ico ico--lg"><use href="#i-database"/></svg><div><h3>เก็บเป็นไฟล์เดียว</h3><p><code>Documents\ตอกบัตร\worktime.db</code> สำรองและกู้คืนได้จากหน้าตั้งค่า</p></div></li>
               <li><svg class="ico ico--lg"><use href="#i-shield"/></svg><div><h3>ถอนการติดตั้ง ข้อมูลไม่หาย</h3><p>ติดตั้งใหม่เมื่อไหร่ก็ใช้ต่อได้ทันที</p></div></li>
             </ul>
@@ -269,6 +314,7 @@
             <p>ตัวติดตั้งยังไม่ได้เซ็นรับรอง Windows จึงเตือนไว้ก่อน กด <b>More info</b> แล้วกด <b>Run anyway</b> เพื่อติดตั้งต่อ</p>
           </div>
         </aside>
+        <p class="install__auto" data-reveal>ติดตั้งครั้งเดียวพอ ตั้งแต่ 0.3.0 แอปเช็กเวอร์ชันใหม่ให้เอง และถามก่อนติดตั้งทุกครั้ง</p>
         <a class="btn btn--primary btn--lg sketch" data-download href="https://github.com/Warayutkub/tokbat/releases/latest" data-reveal><svg class="ico"><use href="#i-download"/></svg>ดาวน์โหลดสำหรับ Windows</a>
       </div>
     </section>
@@ -285,6 +331,8 @@
           <article class="qa sketch sketch--card" data-reveal style="--i:1"><h3>ถอนการติดตั้งแล้วข้อมูลหายไหม?</h3><p>ไม่หาย ไฟล์ข้อมูลอยู่ใน <code>Documents\ตอกบัตร</code> ติดตั้งใหม่ก็ใช้ต่อได้เลย</p></article>
           <article class="qa sketch sketch--card" data-reveal style="--i:2"><h3>ย้ายเวลาจาก Google Sheets ได้ไหม?</h3><p>ได้ ดาวน์โหลดชีตเป็น CSV แล้วกดนำเข้าในหน้าตั้งค่า แถวที่ซ้ำจะถูกข้ามให้</p></article>
           <article class="qa sketch sketch--card" data-reveal style="--i:3"><h3>ใช้บน Mac หรือมือถือได้ไหม?</h3><p>ตอนนี้มีเฉพาะ Windows 10 และ 11</p></article>
+          <article class="qa sketch sketch--card" data-reveal style="--i:4"><h3>สวนสัตว์เลี้ยงทำให้รายงานเปลี่ยนไหม?</h3><p>ไม่เปลี่ยน เหรียญ สัตว์ และของแต่งไม่ไปอยู่ในรายงานหรือไฟล์ส่งออก เวลาที่บันทึกยังเหมือนเดิมทุกนาที</p></article>
+          <article class="qa sketch sketch--card" data-reveal style="--i:5"><h3>ไม่อยากเล่นเกม ปิดได้ไหม?</h3><p>ได้ ปิดที่ ตั้งค่า › สวนสัตว์เลี้ยง แอปจะเปิดมาที่หน้าบันทึกเวลาเหมือนเดิม ของที่สะสมไว้ยังอยู่</p></article>
         </div>
       </div>
     </section>

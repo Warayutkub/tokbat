@@ -306,6 +306,42 @@ code { font: inherit; font-size: 0.94em; background: rgb(255 255 255 / 0.7); bor
   .site-footer__row { flex-direction: row; justify-content: space-between; align-items: center; }
 }
 
+/* ---------- garden (new in 0.3.0): a live sample of the app's garden, laid out like the Figma scene ---------- */
+.badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge--new { background: var(--color-accent); color: var(--color-ink); transition: transform var(--motion-base) var(--ease-back); }
+.badge--new span { display: inline-block; margin-left: 4px; transition: transform var(--motion-base) var(--ease-back); }
+.badge--new:hover { transform: translateY(-1px) rotate(-1deg); }
+.badge--new:hover span { transform: translateX(3px); }
+.garden { display: grid; gap: 28px; }
+.garden .section-head { margin-bottom: 0; }
+.garden__demo { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.garden__stage { aspect-ratio: 16 / 10; border-radius: 16px; }
+.garden__poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.garden__stage .g-stage { opacity: 0; transition: opacity 700ms ease-out, background-color 1.2s ease; }
+.garden__stage.is-live .g-stage { opacity: 1; }
+.garden__stage.is-paused * { animation-play-state: paused !important; }
+.garden__stage .g-tag { pointer-events: none; }
+.garden__stage .g-tag__edit { display: none; }
+.garden__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .ico { display: none; margin: 0 4px 0 -2px; vertical-align: -3px; }
+.chips .tab[aria-pressed="true"] { background: var(--color-accent); font-weight: 600; }
+.chips .tab[aria-pressed="true"] .ico { display: inline-block; }
+.garden__note { font-size: 14px; color: var(--color-muted); }
+.garden__body { display: flex; flex-direction: column; align-items: flex-start; }
+.garden__body .checklist { margin-bottom: 24px; }
+.garden .section-head__body, .garden .checklist li { text-wrap: pretty; }
+.install__auto { font-size: 15px; color: var(--color-muted); text-align: center; max-width: 40em; }
+@media (min-width: 1024px) {
+  .garden { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); grid-template-areas: "demo head" "demo body"; gap: 24px 48px; align-items: center; }
+  .garden__head { grid-area: head; align-self: end; }
+  .garden__demo { grid-area: demo; }
+  .garden__body { grid-area: body; align-self: start; }
+  .garden__stage { border-radius: 18px; }
+  .garden .section-head h2 { font-size: clamp(30px, 3.2vw, 40px); }
+}
+@media (min-width: 1440px) { .garden { grid-template-columns: 600px minmax(0, 1fr); column-gap: 72px; } }
+
 /* ======================================================================
    Motion. Hidden start states only exist when JS runs (html.js), so the
    page is complete without it. The one loud moment is the overnight bar.
@@ -369,4 +405,6 @@ code { font: inherit; font-size: 0.94em; background: rgb(255 255 255 / 0.7); bor
   .btn:hover, .feature:hover, .tab:hover { transform: none; }
   .paper:hover { translate: none; rotate: -2deg; }
   .btn:hover .ico use, .feature:hover .bubble { animation: none; }
+  .garden__stage *, .badge--new span { animation: none !important; transition: none !important; }
+  .badge--new:hover, .badge--new:hover span { transform: none; }
 }

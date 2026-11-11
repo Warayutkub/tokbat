@@ -1,0 +1,89 @@
+/* The scene and pet parts of web/css/garden.css, copied by tools/build_site.py — edit the app's file, then rerun. */
+/* ---------- garden view ---------- */
+.garden-view { position: relative; }
+.g-card { position: relative; flex: 1; min-height: 0; border-radius: var(--radius-card); overflow: hidden; background: #A8DA84; }
+.g-card.sketch::after { z-index: 30; }
+.g-stage { position: absolute; inset: 0; overflow: hidden; background: #BFE4FF; transition: background-color 1.2s ease; }
+.g-stage.is-rain { background: #9AACC0; }
+.g-stage.is-night { background: #1D2B4F; }
+.g-stage.is-night.is-rain { background: #232E47; }
+.g-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.g-bg, .g-layer, .g-fx { position: absolute; inset: 0; }
+.g-bg__set { position: absolute; inset: 0; }
+.g-bg__img { position: absolute; top: 0; width: 1282px; height: 800px; user-select: none; -webkit-user-drag: none; }
+.g-bg__img.is-mirror { transform: scaleX(-1); }
+.g-fx { pointer-events: none; }
+.g-ent { position: absolute; }
+.g-ent svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.g-flip { width: 100%; height: 100%; transition: transform var(--motion-base) var(--ease-out); }
+.g-item.is-flipped .g-flip, .g-pet.is-left .g-flip { transform: scaleX(-1); }
+
+/* night, rain */
+.g-night { position: absolute; inset: 0; background: #14204A; opacity: 0; transition: opacity 1.6s ease; }
+.is-night .g-night { opacity: 0.26; }
+.g-glow { position: absolute; width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%; opacity: 0; transition: opacity 1.6s ease;
+  background: radial-gradient(circle, rgb(255 230 154 / 0.55) 0, rgb(255 230 154 / 0.22) 30%, transparent 62%); }
+.is-night .g-glow { opacity: 1; animation: glow 3.2s ease-in-out infinite alternate; }
+@keyframes glow { to { transform: scale(1.08); } }
+.g-flies { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s ease; }
+.is-night:not(.is-rain) .g-flies { opacity: 1; }
+.g-fly { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #FFF07A; box-shadow: 0 0 10px 4px rgb(255 240 122 / 0.35); animation: fly 6s ease-in-out infinite; }
+@keyframes fly { 0%, 100% { transform: translate(0, 0); opacity: 0.3; } 25% { transform: translate(18px, -14px); opacity: 1; } 50% { transform: translate(-6px, -26px); opacity: 0.5; } 75% { transform: translate(-20px, -8px); opacity: 1; } }
+.g-rain { position: absolute; inset: 0; overflow: hidden; opacity: 0; transition: opacity 1.2s ease; }
+.is-rain .g-rain { opacity: 1; }
+.g-rain__fall { position: absolute; left: 0; top: 0; width: 0; height: 0; animation: rain-fall 0.7s linear infinite; }
+.g-rain__tile { position: absolute; left: 0; }
+.g-rain path { stroke: #EEF5FC; }
+.is-night .g-rain path { stroke: #AFC4DE; }
+@keyframes rain-fall { from { transform: translate(0, 0); } to { transform: translate(-224px, 800px); } }
+.g-ripples { position: absolute; opacity: 0; transition: opacity 1s ease; }
+.is-rain .g-ripples { opacity: 1; }
+.g-ripple { position: absolute; width: 26px; height: 9px; margin: -4px 0 0 -13px; border: 2px solid #EEF5FC; border-radius: 50%; animation: ripple 1.8s ease-out infinite; }
+@keyframes ripple { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+
+/* ---------- pets: the parts move (classes come from the Figma layer names) ---------- */
+.g-pet { cursor: pointer; transition: opacity 0.6s ease, transform 0.6s ease; }
+.g-pet .g-bob { width: 100%; height: 100%; }
+.g-pet [class^="leg-"], .g-pet .tail, .g-pet .head, .g-pet .ear-l, .g-pet .ear-r, .g-pet .eye-l, .g-pet .eye-r { transform-box: fill-box; }
+.g-pet [class^="leg-"] { transform-origin: 50% 6%; }
+.g-pet .tail { transform-origin: 100% 100%; animation: tail 1.8s ease-in-out infinite alternate; }
+.g-pet[data-species="rabbit"] .tail { transform-origin: 70% 60%; animation: puff 2.6s ease-in-out infinite; }
+.g-pet .head { transform-origin: 45% 92%; animation: head 7s ease-in-out infinite; }
+.g-pet .ear-l, .g-pet .ear-r { transform-origin: 50% 95%; }
+.g-pet .ear-r { animation: ear 5.5s ease-in-out infinite; }
+.g-pet .eye-l, .g-pet .eye-r { transform-origin: 50% 50%; animation: blink 4.8s infinite; }
+.g-pet.is-walking .g-bob { animation: bob 0.24s ease-in-out infinite alternate; }
+.g-pet.is-walking .leg-front-near, .g-pet.is-walking .leg-back-far { animation: step 0.48s ease-in-out infinite alternate; }
+.g-pet.is-walking .leg-front-far, .g-pet.is-walking .leg-back-near { animation: step 0.48s ease-in-out infinite alternate-reverse; }
+.g-pet.is-walking .tail { animation-duration: 0.5s; }
+.g-pet.is-sleeping .eye-l, .g-pet.is-sleeping .eye-r { animation: none; transform: scaleY(0.12); }
+.g-pet.is-sleeping .tail, .g-pet.is-sleeping .head { animation: none; }
+.g-pet.is-sleeping .g-bob { animation: breathe 3.4s ease-in-out infinite; transform-origin: 50% 100%; }
+.g-pet.is-hiding { opacity: 0; transform: scale(0.9); pointer-events: none; }
+.g-pet.is-happy .g-bob { animation: hop 0.7s var(--ease-out); }
+@keyframes step { from { transform: rotate(-17deg); } to { transform: rotate(17deg); } }
+@keyframes bob { to { transform: translateY(-3px); } }
+@keyframes tail { from { transform: rotate(-9deg); } to { transform: rotate(10deg); } }
+@keyframes puff { 50% { transform: scale(1.12); } }
+@keyframes head { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-5deg); } 85% { transform: rotate(3deg); } }
+@keyframes ear { 0%, 88%, 100% { transform: rotate(0); } 92% { transform: rotate(-12deg); } 96% { transform: rotate(6deg); } }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes breathe { 50% { transform: scaleY(0.97) scaleX(1.02); } }
+@keyframes hop { 30% { transform: translateY(-22px) rotate(-4deg); } 60% { transform: translateY(0); } 75% { transform: translateY(-7px); } }
+.g-tag { position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%); display: none; align-items: center; gap: 5px; padding: 3px 10px;
+  background: #fff; border: 1.6px solid var(--color-ink); border-radius: var(--radius-full); font: 600 14px/1.4 var(--font); white-space: nowrap; }
+.g-pet:hover .g-tag, .g-pet.show-tag .g-tag { display: inline-flex; }
+.g-pet.is-left .g-tag, .g-pet.is-left .g-zz { transform: translate(-50%, -100%); }
+.g-zz { position: absolute; right: 10%; top: 10%; font: 600 20px/1 var(--font); color: #fff; text-shadow: 0 0 2px var(--color-ink); opacity: 0; pointer-events: none; }
+.g-pet.is-sleeping .g-zz { animation: zz 2.6s ease-in-out infinite; }
+@keyframes zz { 0% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(14px, -30px); } }
+
+/* the tint and the rain lie over everything but never catch the mouse */
+.g-night, .g-rain, .g-rain * { pointer-events: none; }
+
+/* caught in the rain with nowhere to go: shivering, tail and ears down */
+.g-pet.is-wet .g-bob { animation: shiver 0.16s linear infinite alternate; }
+.g-pet.is-wet .tail { animation: none; transform: rotate(22deg); }
+.g-pet.is-wet .ear-l { transform: rotate(-14deg); }
+.g-pet.is-wet .ear-r { animation: none; transform: rotate(14deg); }
+@keyframes shiver { from { transform: translateX(-1.2px); } to { transform: translateX(1.2px); } }
