@@ -3,7 +3,7 @@
 import { call } from "../api.js";
 import { h, raw, button, chip, toast } from "../ui.js";
 import { itemSvg, CATS } from "./art.js";
-import { W, FEET_MIN, FEET_MAX } from "./stage.js";
+import { W, FEET_MIN, FEET_MAX, LAWN } from "./stage.js";
 
 const ICON_FLIP = '<svg class="ico ico--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M9 6L3 12l6 6z"/><path d="M15 6l6 6-6 6z"/></svg>';
 const ICON_STORE = '<svg class="ico ico--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 5h18v4H3zM10 13h4"/></svg>';
@@ -56,7 +56,7 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
 
   // ---------------------------------------------------------------- placing
   const clampPos = (d, x, y) => ({
-    x: Math.max(-d.w * 0.4, Math.min(W - d.w * 0.6, x)),
+    x: Math.max(LAWN.x0 - d.w * 0.4, Math.min(LAWN.x1 - d.w * 0.6, x)),
     y: Math.max(FEET_MIN - 70 - d.h, Math.min(FEET_MAX + 6 - d.h, y)),
   });
 

@@ -10,6 +10,9 @@ export const W = 1280, H = 800;
 export const ZOOMS = [0.62, 0.72, 0.82, 0.94];
 const ZOOM_KEY = "tokbat.garden.zoom";
 export const FEET_MIN = 430, FEET_MAX = 792;
+/** The lawn runs half a scene past each side of the drawn scene (the background repeats there), so a wide window
+ * or a zoomed-out view has room for things and pets all the way out. */
+export const LAWN = { x0: -W / 2, x1: W + W / 2 };
 const PET = { w: 180, h: 162 };
 const DEFAULT_KIND = { gait: "walk", size: 1, speed: 50, rain: "shelter", water: "none" };
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -42,7 +45,7 @@ export class Stage {
     this.rain = div("g-rain");
     this.rain.innerHTML = rainTiles();
     this.fireflies = div("g-flies");
-    for (let i = 0; i < 14; i++) this.fireflies.append(div("g-fly", { left: `${rand(40, W - 40)}px`, top: `${rand(400, 760)}px`, animationDelay: `-${rand(0, 6).toFixed(2)}s` }));
+    for (let i = 0; i < 28; i++) this.fireflies.append(div("g-fly", { left: `${rand(LAWN.x0 + 40, LAWN.x1 - 40)}px`, top: `${rand(400, 760)}px`, animationDelay: `-${rand(0, 6).toFixed(2)}s` }));
     this.fx.append(this.fireflies);
     this.world.append(this.bg, this.layer, this.fx);
     // tint and rain cover the whole box (also the sky above the world and the grass beside it)
@@ -277,7 +280,7 @@ export class Stage {
    * it keeps to the sides and the front: an animal standing behind a pond would look as if it sat on the water. */
   waterPoint(w, k) {
     const a = k > 1 ? rand(-0.15, 1.15) * Math.PI : Math.random() * Math.PI * 2;
-    return { x: Math.max(60, Math.min(W - 60, w.cx + Math.cos(a) * w.rx * k)), y: Math.max(FEET_MIN + 20, Math.min(FEET_MAX - 6, w.cy + Math.sin(a) * w.ry * k)) };
+    return { x: Math.max(LAWN.x0 + 60, Math.min(LAWN.x1 - 60, w.cx + Math.cos(a) * w.rx * k)), y: Math.max(FEET_MIN + 20, Math.min(FEET_MAX - 6, w.cy + Math.sin(a) * w.ry * k)) };
   }
 
   // ---------------------------------------------------------------- pets
@@ -411,7 +414,7 @@ class PetActor {
     } else if (Math.random() < (rain ? 0.85 : 0.7)) {
       const v = st.view();
       for (let i = 0; i < 6; i++) { // somewhere on the grass, not in the pond (only swimmers stop in water)
-        this.goal = { x: rand(Math.max(90, v.x0 + 90), Math.min(W - 90, v.x1 - 90)), y: rand(Math.max(FEET_MIN + 40, v.y0 + 200), Math.min(FEET_MAX - 6, v.y1 - 8)), then: "idle" };
+        this.goal = { x: rand(Math.max(LAWN.x0 + 90, v.x0 + 90), Math.min(LAWN.x1 - 90, v.x1 - 90)), y: rand(Math.max(FEET_MIN + 40, v.y0 + 200), Math.min(FEET_MAX - 6, v.y1 - 8)), then: "idle" };
         if (!st.inWater(this.goal.x, this.goal.y)) break;
       }
     } else {
@@ -439,7 +442,7 @@ class PetActor {
       if (r < 0.5 && free.length) to = pick(free);
       else if (r < 0.85) {
         const v = st.view();
-        to = { x: rand(Math.max(90, v.x0 + 90), Math.min(W - 90, v.x1 - 90)), y: rand(FEET_MIN + 60, FEET_MAX - 10) };
+        to = { x: rand(Math.max(LAWN.x0 + 90, v.x0 + 90), Math.min(LAWN.x1 - 90, v.x1 - 90)), y: rand(FEET_MIN + 60, FEET_MAX - 10) };
         if (st.inWater(to.x, to.y)) to.y = Math.min(FEET_MAX - 10, to.y + 90);
         then = "peck";
       } else { this.goal = null; return; }

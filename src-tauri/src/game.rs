@@ -376,7 +376,8 @@ pub fn save_decor(con: &Connection, changes: &Value) -> Value {
     let mut n = 0;
     for c in changes.as_array().cloned().unwrap_or_default() {
         let Some(id) = c["id"].as_i64() else { continue };
-        let (x, y) = (c["x"].as_f64().map(|v| v.clamp(-200.0, w)), c["y"].as_f64().map(|v| v.clamp(-200.0, h)));
+        // the lawn runs half a scene past each side of the drawn scene (web/js/garden/stage.js LAWN)
+        let (x, y) = (c["x"].as_f64().map(|v| v.clamp(-w / 2.0 - 200.0, w * 1.5)), c["y"].as_f64().map(|v| v.clamp(-200.0, h)));
         let (x, y) = if x.is_some() && y.is_some() { (x, y) } else { (None, None) };
         n += con.execute("UPDATE owned_items SET x = ?1, y = ?2, flip = ?3 WHERE id = ?4", params![x, y, i64::from(c["flip"] == true), id]).unwrap_or(0);
     }

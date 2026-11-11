@@ -300,3 +300,19 @@ fn the_catalogue_knows_six_kinds_of_animal_and_how_they_move() {
     assert_eq!(t.call("pet_adopt", json!([{"species": "frog", "color": "green", "name": "อ๊บอ๊บ"}]))["pet"]["species"], "frog");
     assert!(m["items"].as_array().unwrap().iter().any(|i| i["id"] == "pond" && i["water"].is_array()));
 }
+
+#[test]
+fn things_can_stand_out_on_the_wide_lawn() {
+    let t = api();
+    t.state();
+    let id = t.call("shop_buy", json!(["bench"]))["id"].as_i64().unwrap();
+    t.call("decor_save", json!([[{"id": id, "x": 1700.0, "y": 600.0, "flip": false}]]));
+    let items = t.state()["items"].clone();
+    let it = items.as_array().unwrap().iter().find(|i| i["id"] == id).unwrap();
+    assert_eq!(it["x"], 1700.0);
+    t.call("decor_save", json!([[{"id": id, "x": -5000.0, "y": 600.0, "flip": false}]]));
+    let items = t.state()["items"].clone();
+    let it = items.as_array().unwrap().iter().find(|i| i["id"] == id).unwrap();
+    assert_eq!(it["x"], -840.0, "kept on the lawn");
+}
+
