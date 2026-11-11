@@ -59,7 +59,9 @@ export const CATS = [
   ["toys", "ของเล่น & ชาม"], ["decor", "ตกแต่งสวน"], ["ground", "พื้น"],
 ];
 export const RARITY = { common: "ธรรมดา", rare: "หายาก", special: "พิเศษ" };
-export const SPECIES = { cat: "แมว", dog: "หมา", rabbit: "กระต่าย" };
+/** Kinds of animal that have at least one colour to adopt (built-in and from packs), in catalogue order. */
+export const kinds = (m) => (m.species || []).filter((k) => m.pets.some((p) => p.species === k.id));
+export const speciesName = (m, id) => (m.species || []).find((k) => k.id === id)?.name || id;
 
 export function coinSvg(size = 18) {
   return `<svg class="coin" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.6" fill="#FFD54A" stroke="#22304A" stroke-width="1.8"/><circle cx="12" cy="12" r="5.4" fill="none" stroke="#D9A21B" stroke-width="1.7"/></svg>`;

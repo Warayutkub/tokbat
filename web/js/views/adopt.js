@@ -1,7 +1,7 @@
 // รับมาเลี้ยง — pick an animal, a colour and a name; the preview shows it on its own patch of grass.
 import { call } from "../api.js";
 import { h, raw, icon, button, toast } from "../ui.js";
-import { manifest, petSvg, coinSvg, SPECIES } from "../garden/art.js";
+import { manifest, petSvg, coinSvg, kinds } from "../garden/art.js";
 import { setCoins } from "./garden.js";
 
 const NAMES = ["ส้มจี๊ด", "ข้าวปั้น", "มะลิ", "ถั่วแดง", "โมจิ", "บัวลอย", "ทองหยิบ", "ขนมปัง", "ปุยเมฆ", "ส้มโอ", "ลูกชิ้น", "ปุยฝ้าย", "โกโก้", "มะขาม", "ขนุน", "เต้าหู้", "งาดำ", "ลำไย"];
@@ -11,7 +11,7 @@ export async function render(root, params) {
   const [m, st0] = await Promise.all([manifest(), call("garden_state")]);
   let st = st0;
   setCoins(st.balance);
-  let species = SPECIES[params.species] ? params.species : "cat";
+  let species = kinds(m).some((k) => k.id === params.species) ? params.species : "cat";
   let color = null;
   let name = NAMES[Math.floor(Math.random() * NAMES.length)];
   const colorsOf = (sp) => m.pets.filter((p) => p.species === sp);
@@ -22,7 +22,7 @@ export async function render(root, params) {
 
   async function paintLeft() {
     if (!color || !colorsOf(species).some((c) => c.color === color)) color = colorsOf(species)[0].color;
-    const animals = await Promise.all(Object.entries(SPECIES).map(async ([sp, label]) => {
+    const animals = await Promise.all(kinds(m).map(async ({ id: sp, name: label }) => {
       const first = colorsOf(sp)[0];
       const b = h("button.choice.sketch", { type: "button", "aria-pressed": sp === species ? "true" : "false", onclick: () => { species = sp; color = null; paintLeft(); paintRight(); } });
       b.append(await petSvg(sp, first.color), h("b", {}, label), h("span.price", {}, raw(coinSvg(15)), String(st.pet_price)));
@@ -35,7 +35,7 @@ export async function render(root, params) {
     }));
     left.replaceChildren(
       h("div.shop__head", {}, h("a.back", { href: "#/shop" }, raw(icon("left", "ico--sm")), "ร้านค้า"), h("h1", {}, "รับมาเลี้ยง")),
-      h("p.step-title", {}, "1 · เลือกสัตว์"), h("div.choices", {}, ...animals),
+      h("p.step-title", {}, "1 · เลือกสัตว์"), h("div.choices.choices--kinds", {}, ...animals),
       h("p.step-title", {}, "2 · เลือกสี"), h("div.choices", {}, ...colors),
       h("p.step-title", {}, "3 · ตั้งชื่อ"),
       h("div.name-row", {}, h("label.field", { style: { width: "320px" } }, h("span.field__label", {}, "ชื่อ"), h("span.input.sketch", {}, input)),

@@ -1,6 +1,6 @@
 [package]
 name = "tokbat"
-version = "0.3.1"
+version = "0.4.0"
 description = "ตอกบัตร — บันทึกเวลาทำงานบนเครื่อง"
 authors = ["Wara"]
 edition = "2024"

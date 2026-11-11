@@ -97,7 +97,7 @@ def garden() -> None:
         if item["id"] in props:
             w, h = demo["sizes"][item["id"]]  # as drawn in the approved scene, a little smaller than in the game
             items.append({**item, "w": w, "h": h})
-    manifest = {"items": items, "pets": [p for p in full["pets"] if f"{p['species']}-{p['color']}" in pets]}
+    manifest = {"items": items, "pets": [p for p in full["pets"] if f"{p['species']}-{p['color']}" in pets], "species": full.get("species", [])}
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     js = DOCS / "js" / "garden"

@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "world": {
   "w": 1280,
   "h": 800,
@@ -14,7 +14,17 @@
    "rarity": "common",
    "w": 210.0,
    "h": 250.0,
-   "shelter": true
+   "shelter": true,
+   "perch": [
+    [
+     0.5,
+     0.05
+    ],
+    [
+     0.5,
+     0.6
+    ]
+   ]
   },
   {
    "id": "pine",
@@ -24,7 +34,17 @@
    "rarity": "common",
    "w": 170.0,
    "h": 252.0,
-   "shelter": true
+   "shelter": true,
+   "perch": [
+    [
+     0.5,
+     0.03
+    ],
+    [
+     0.5,
+     0.62
+    ]
+   ]
   },
   {
    "id": "coconut",
@@ -34,7 +54,13 @@
    "rarity": "rare",
    "w": 220.0,
    "h": 280.0,
-   "shelter": true
+   "shelter": true,
+   "perch": [
+    [
+     0.55,
+     0.12
+    ]
+   ]
   },
   {
    "id": "tree-pink",
@@ -44,7 +70,17 @@
    "rarity": "rare",
    "w": 210.0,
    "h": 250.0,
-   "shelter": true
+   "shelter": true,
+   "perch": [
+    [
+     0.5,
+     0.04
+    ],
+    [
+     0.5,
+     0.62
+    ]
+   ]
   },
   {
    "id": "tree-mango",
@@ -54,7 +90,17 @@
    "rarity": "rare",
    "w": 210.0,
    "h": 250.0,
-   "shelter": true
+   "shelter": true,
+   "perch": [
+    [
+     0.5,
+     0.05
+    ],
+    [
+     0.5,
+     0.6
+    ]
+   ]
   },
   {
    "id": "sapling",
@@ -149,6 +195,12 @@
    "shelter": true,
    "bed": [
     "dog"
+   ],
+   "perch": [
+    [
+     0.5,
+     0.05
+    ]
    ]
   },
   {
@@ -161,6 +213,12 @@
    "h": 240.0,
    "bed": [
     "cat"
+   ],
+   "perch": [
+    [
+     0.32,
+     0.03
+    ]
    ]
   },
   {
@@ -174,6 +232,12 @@
    "shelter": true,
    "bed": [
     "rabbit"
+   ],
+   "perch": [
+    [
+     0.5,
+     0.1
+    ]
    ]
   },
   {
@@ -261,7 +325,13 @@
    "price": 10,
    "rarity": "common",
    "w": 144.0,
-   "h": 84.0
+   "h": 84.0,
+   "perch": [
+    [
+     0.5,
+     0.06
+    ]
+   ]
   },
   {
    "id": "scarecrow",
@@ -270,7 +340,13 @@
    "price": 35,
    "rarity": "special",
    "w": 162.0,
-   "h": 222.0
+   "h": 222.0,
+   "perch": [
+    [
+     0.5,
+     0.03
+    ]
+   ]
   },
   {
    "id": "food-bowl",
@@ -342,7 +418,13 @@
    "price": 20,
    "rarity": "common",
    "w": 184.0,
-   "h": 110.0
+   "h": 110.0,
+   "perch": [
+    [
+     0.5,
+     0.04
+    ]
+   ]
   },
   {
    "id": "lamp-post",
@@ -355,6 +437,12 @@
    "light": [
     36,
     39
+   ],
+   "perch": [
+    [
+     0.5,
+     0.02
+    ]
    ]
   },
   {
@@ -364,7 +452,13 @@
    "price": 18,
    "rarity": "common",
    "w": 110.0,
-   "h": 142.0
+   "h": 142.0,
+   "perch": [
+    [
+     0.42,
+     0.06
+    ]
+   ]
   },
   {
    "id": "signpost",
@@ -373,7 +467,13 @@
    "price": 13,
    "rarity": "common",
    "w": 120.0,
-   "h": 140.0
+   "h": 140.0,
+   "perch": [
+    [
+     0.5,
+     0.04
+    ]
+   ]
   },
   {
    "id": "picket-fence",
@@ -382,7 +482,17 @@
    "price": 15,
    "rarity": "common",
    "w": 190.0,
-   "h": 92.0
+   "h": 92.0,
+   "perch": [
+    [
+     0.3,
+     0.06
+    ],
+    [
+     0.7,
+     0.06
+    ]
+   ]
   },
   {
    "id": "wood-fence",
@@ -391,7 +501,17 @@
    "price": 15,
    "rarity": "common",
    "w": 186.0,
-   "h": 92.0
+   "h": 92.0,
+   "perch": [
+    [
+     0.25,
+     0.1
+    ],
+    [
+     0.75,
+     0.1
+    ]
+   ]
   },
   {
    "id": "pond",
@@ -401,7 +521,13 @@
    "rarity": "rare",
    "w": 224.0,
    "h": 104.0,
-   "ground": true
+   "ground": true,
+   "water": [
+    0.5,
+    0.52,
+    0.42,
+    0.34
+   ]
   },
   {
    "id": "stepping-stones",
@@ -550,6 +676,102 @@
    "speciesName": "กระต่าย",
    "w": 180.0,
    "h": 162.0
+  },
+  {
+   "species": "frog",
+   "color": "green",
+   "colorName": "เขียว",
+   "speciesName": "กบ",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "frog",
+   "color": "yellow",
+   "colorName": "เหลือง",
+   "speciesName": "กบ",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "frog",
+   "color": "blue",
+   "colorName": "ฟ้า",
+   "speciesName": "กบ",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "frog",
+   "color": "brown",
+   "colorName": "น้ำตาล",
+   "speciesName": "กบ",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "bird",
+   "color": "blue",
+   "colorName": "ฟ้า",
+   "speciesName": "นก",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "bird",
+   "color": "yellow",
+   "colorName": "เหลือง",
+   "speciesName": "นก",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "bird",
+   "color": "red",
+   "colorName": "แดง",
+   "speciesName": "นก",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "bird",
+   "color": "brown",
+   "colorName": "น้ำตาล",
+   "speciesName": "นก",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "duck",
+   "color": "white",
+   "colorName": "ขาว",
+   "speciesName": "เป็ด",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "duck",
+   "color": "yellow",
+   "colorName": "เหลือง",
+   "speciesName": "เป็ด",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "duck",
+   "color": "brown",
+   "colorName": "น้ำตาล",
+   "speciesName": "เป็ด",
+   "w": 180.0,
+   "h": 162.0
+  },
+  {
+   "species": "duck",
+   "color": "mallard",
+   "colorName": "หัวเขียว",
+   "speciesName": "เป็ด",
+   "w": 180.0,
+   "h": 162.0
   }
  ],
  "bg": {
@@ -557,5 +779,61 @@
   "night": "bg/night.svg",
   "rain": "bg/rain.svg",
   "night-rain": "bg/night-rain.svg"
- }
+ },
+ "species": [
+  {
+   "id": "cat",
+   "name": "แมว",
+   "gait": "walk",
+   "size": 0.9,
+   "speed": 46,
+   "rain": "shelter",
+   "water": "none"
+  },
+  {
+   "id": "dog",
+   "name": "หมา",
+   "gait": "walk",
+   "size": 1.0,
+   "speed": 58,
+   "rain": "shelter",
+   "water": "none"
+  },
+  {
+   "id": "rabbit",
+   "name": "กระต่าย",
+   "gait": "hop",
+   "size": 0.85,
+   "speed": 64,
+   "rain": "shelter",
+   "water": "none"
+  },
+  {
+   "id": "frog",
+   "name": "กบ",
+   "gait": "hop",
+   "size": 0.6,
+   "speed": 50,
+   "rain": "play",
+   "water": "near"
+  },
+  {
+   "id": "bird",
+   "name": "นก",
+   "gait": "fly",
+   "size": 0.55,
+   "speed": 110,
+   "rain": "shelter",
+   "water": "none"
+  },
+  {
+   "id": "duck",
+   "name": "เป็ด",
+   "gait": "waddle",
+   "size": 0.85,
+   "speed": 38,
+   "rain": "play",
+   "water": "swim"
+  }
+ ]
 }

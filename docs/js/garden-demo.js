@@ -43,6 +43,11 @@ async function boot() {
     const [x, feet] = demo.pets[i][3];
     p.x = x;
     p.y = feet - 6;
+    if (p.gait === "fly") {
+      // a bird starts on the perch nearest its spot (up on the tree, in front of it)
+      const perch = s.perches().sort((a, b) => Math.hypot(a.x - x, a.y - feet) - Math.hypot(b.x - x, b.y - feet))[0];
+      if (perch) Object.assign(p, { x: perch.x, y: perch.y, z: perch.z, perch }), s.perchTaken.set(perch.key, p);
+    }
     p.draw();
   });
   await s.setSky(SKIES[want]);

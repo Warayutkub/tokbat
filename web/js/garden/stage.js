@@ -1,6 +1,7 @@
 // The garden scene: a 1280 x 800 world scaled to cover its box (anchored to the bottom, so the sky crops first).
 // Things are layered by where their feet are; ground pieces (pond, path, mat…) always sit underneath.
-// Pets are little actors: they wander, hide from the rain under trees and leaves, and go to bed at night.
+// Pets are little actors: they walk, hop, fly or waddle (their species says which), hide from the rain or play in it,
+// swim, perch, and go to bed at night.
 import { itemSvg, petSvg } from "./art.js";
 
 export const W = 1280, H = 800;
@@ -9,7 +10,7 @@ export const ZOOMS = [0.62, 0.72, 0.82, 0.94];
 const ZOOM_KEY = "tokbat.garden.zoom";
 export const FEET_MIN = 430, FEET_MAX = 792;
 const PET = { w: 180, h: 162 };
-const SPEED = { cat: 46, dog: 58, rabbit: 64 };
+const DEFAULT_KIND = { gait: "walk", size: 1, speed: 50, rain: "shelter", water: "none" };
 const rand = (a, b) => a + Math.random() * (b - a);
 const div = (cls, style) => { const e = document.createElement("div"); e.className = cls; if (style) Object.assign(e.style, style); return e; };
 
@@ -28,6 +29,8 @@ const CANOPY = {
 export class Stage {
   constructor(host, manifest) {
     this.m = manifest;
+    this.kinds = Object.fromEntries((manifest.species || []).map((k) => [k.id, k]));
+    this.perchTaken = new Map();
     this.host = host;
     this.el = div("g-stage");
     this.world = div("g-world", { width: `${W}px`, height: `${H}px` });
@@ -239,8 +242,46 @@ export class Stage {
     return out;
   }
 
+  // ---------------------------------------------------------------- what animals use
+  kind(id) { return { ...DEFAULT_KIND, id, ...this.kinds[id] }; }
+
+  /** Where birds can stand: tree tops, fence rails, the lamp… (cover = under a canopy, dry in the rain). */
+  perches() {
+    const out = [];
+    for (const it of this.items.values()) {
+      const d = it.def, r = it.row;
+      (d.perch || []).forEach(([fx, fy], i) => out.push({
+        key: `${r.id}:${i}`, x: r.x + (r.flip ? 1 - fx : fx) * d.w, y: r.y + fy * d.h,
+        z: 11 + Math.round(r.y + d.h), cover: fy > 0.3 && !!CANOPY[d.id],
+      }));
+    }
+    return out;
+  }
+
+  /** Water areas (ponds) as world ellipses. */
+  waters() {
+    const out = [];
+    for (const it of this.items.values()) {
+      const w = it.def.water;
+      if (!w) continue;
+      const d = it.def, r = it.row;
+      out.push({ cx: r.x + (r.flip ? 1 - w[0] : w[0]) * d.w, cy: r.y + w[1] * d.h, rx: w[2] * d.w, ry: w[3] * d.h });
+    }
+    return out;
+  }
+
+  inWater(x, y) { return this.waters().some((w) => ((x - w.cx) / w.rx) ** 2 + ((y - w.cy) / w.ry) ** 2 < 1); }
+
+  /** A point at `k` times the water's radius (below 1 inside, above 1 round the edge), on the lawn. Outside the water
+   * it keeps to the sides and the front: an animal standing behind a pond would look as if it sat on the water. */
+  waterPoint(w, k) {
+    const a = k > 1 ? rand(-0.15, 1.15) * Math.PI : Math.random() * Math.PI * 2;
+    return { x: Math.max(60, Math.min(W - 60, w.cx + Math.cos(a) * w.rx * k)), y: Math.max(FEET_MIN + 20, Math.min(FEET_MAX - 6, w.cy + Math.sin(a) * w.ry * k)) };
+  }
+
   // ---------------------------------------------------------------- pets
   async setPets(rows) {
+    this.perchTaken.clear();
     for (const p of this.pets) p.el.remove();
     this.pets = await Promise.all(rows.map(async (row, i) => {
       const p = new PetActor(this, row, await petSvg(row.species, row.color), i);
@@ -258,19 +299,31 @@ export class Stage {
 }
 
 // ------------------------------------------------------------------ pet actor
+// How an animal moves comes from its species (manifest "species"): walk, hop (rabbit, frog), fly (bird) or
+// waddle (duck, which also swims). Rain: "shelter" goes in or under cover, "play" stays out. Water: "near" likes the
+// pond's edge, "swim" goes in. Feet are at (x, y); everything else hangs off that.
+const HOP = { crouch: 0.12, air: 0.42, land: 0.12 };
+
 class PetActor {
   constructor(stage, row, svg, i) {
     this.stage = stage;
     this.row = row;
-    this.speed = SPEED[row.species] || 50;
+    this.kind = stage.kind(row.species);
+    this.gait = this.kind.gait;
+    this.size = this.kind.size;
+    this.speed = this.kind.speed;
+    this.w = PET.w * this.size;
+    this.h = PET.h * this.size;
     this.el = div("g-ent g-pet");
     this.el.dataset.species = row.species;
-    this.el.style.width = `${PET.w}px`;
-    this.el.style.height = `${PET.h}px`;
+    this.el.dataset.gait = this.gait;
+    this.el.style.width = `${this.w}px`;
+    this.el.style.height = `${this.h}px`;
     this.flip = div("g-flip");
-    const bob = div("g-bob");
-    bob.append(svg);
-    this.flip.append(bob);
+    this.bob = div("g-bob");
+    this.bob.append(svg);
+    this.flip.append(this.bob);
+    this.wake = div("g-wake");
     this.tag = document.createElement("button");
     this.tag.type = "button";
     this.tag.className = "g-tag";
@@ -280,13 +333,17 @@ class PetActor {
     this.tag.querySelector("b").textContent = row.name;
     this.zz = div("g-zz");
     this.zz.textContent = "z z";
-    this.el.append(this.flip, this.tag, this.zz);
+    this.el.append(this.wake, this.flip, this.tag, this.zz);
     this.el.title = row.name;
     this.el.addEventListener("click", () => this.pet());
     this.x = rand(220, 1060);
     this.y = rand(560, 760);
+    this.z = null;          // set while perched up high (birds) or flying, else from the feet
+    this.lift = 0;          // height above the feet (hops, flight)
+    this.perch = null;      // the perch a bird holds
     this.face = Math.random() < 0.5 ? 1 : -1;
-    this.target = null;
+    this.goal = null;
+    this.move = null;       // the hop or flight in progress
     this.timer = rand(0.5, 2.5) + i * 0.4;
     this.mode = "idle";
     this.draw();
@@ -304,62 +361,173 @@ class PetActor {
   set(mode) {
     if (mode === this.mode) return;
     this.mode = mode;
-    this.el.classList.toggle("is-walking", mode === "walk");
-    this.el.classList.toggle("is-sleeping", mode === "sleep");
-    this.el.classList.toggle("is-hiding", mode === "home");
-    this.el.classList.toggle("is-wet", mode === "wet");
+    const c = this.el.classList;
+    c.toggle("is-walking", mode === "walk");
+    c.toggle("is-sleeping", mode === "sleep");
+    c.toggle("is-hiding", mode === "home");
+    c.toggle("is-wet", mode === "wet");
+    c.toggle("is-flying", mode === "fly");
+    c.toggle("is-pecking", mode === "peck");
+  }
+
+  setPhase(p) {
+    if (p === this.phase) return;
+    this.phase = p;
+    for (const k of ["crouch", "air", "land"]) this.el.classList.toggle(`is-${k}`, p === k);
   }
 
   draw() {
     const s = this.el.style;
-    s.left = `${this.x - PET.w / 2}px`;
-    s.top = `${this.y - PET.h + 6}px`;
-    s.zIndex = 10 + Math.round(this.y);
+    s.left = `${this.x - this.w / 2}px`;
+    s.top = `${this.y - this.h + 6 * this.size}px`;
+    s.zIndex = this.z ?? 10 + Math.round(this.y);
+    this.bob.style.translate = this.lift ? `0 ${(-this.lift).toFixed(1)}px` : "";
     this.el.classList.toggle("is-left", this.face < 0);
+    this.el.classList.toggle("is-perched", !!this.perch);
+    const swim = this.kind.water === "swim" && !this.move && this.stage.inWater(this.x, this.y);
+    this.el.classList.toggle("is-swimming", swim);
   }
 
+  // ---------------------------------------------------------------- deciding where to go
   choose(st) {
-    const sp = this.row.species, { night, rain } = st.sky;
+    if (this.gait === "fly") return this.chooseFlight(st);
+    const sp = this.row.species, { night, rain } = st.sky, k = this.kind;
     const near = (list) => list.sort((a, c) => Math.hypot(a.x - this.x, a.y - this.y) - Math.hypot(c.x - this.x, c.y - this.y))[0];
     const here = { x: this.x, y: this.y };
-    if (rain) {
+    const water = st.waters();
+    if (rain && k.rain !== "play") {
       // inside if it can, under a tree or leaf if not, otherwise it sits there shivering
       const home = near(st.spots("home", sp)), tree = near(st.spots("shelter", sp));
       this.goal = home ? { ...home, then: "home" } : tree ? { ...tree, then: night ? "sleep" : "idle" } : { ...here, then: night ? "sleep" : "wet" };
     } else if (night) {
       const home = near(st.spots("home", sp)), bed = near(st.spots("bed", sp));
-      this.goal = home ? { ...home, then: "home" } : bed ? { ...bed, then: "sleep" } : { ...here, then: "sleep" };
-    } else if (Math.random() < 0.7) {
+      const edge = k.water !== "none" && water.length ? st.waterPoint(water[0], 1.35) : null;
+      this.goal = home ? { ...home, then: "home" } : bed ? { ...bed, then: "sleep" } : edge ? { ...edge, then: "sleep" } : { ...here, then: "sleep" };
+    } else if (k.water === "swim" && water.length && Math.random() < (rain ? 0.8 : 0.5)) {
+      this.goal = { ...st.waterPoint(water[Math.floor(Math.random() * water.length)], rand(0.1, 0.75)), then: "idle" };
+    } else if (k.water === "near" && water.length && Math.random() < 0.6) {
+      this.goal = { ...st.waterPoint(water[Math.floor(Math.random() * water.length)], rand(1.3, 1.7)), then: "idle" };
+    } else if (Math.random() < (rain ? 0.85 : 0.7)) {
       const v = st.view();
-      this.goal = { x: rand(Math.max(90, v.x0 + 90), Math.min(W - 90, v.x1 - 90)), y: rand(Math.max(FEET_MIN + 40, v.y0 + 200), Math.min(FEET_MAX - 6, v.y1 - 8)), then: "idle" };
+      for (let i = 0; i < 6; i++) { // somewhere on the grass, not in the pond (only swimmers stop in water)
+        this.goal = { x: rand(Math.max(90, v.x0 + 90), Math.min(W - 90, v.x1 - 90)), y: rand(Math.max(FEET_MIN + 40, v.y0 + 200), Math.min(FEET_MAX - 6, v.y1 - 8)), then: "idle" };
+        if (!st.inWater(this.goal.x, this.goal.y)) break;
+      }
     } else {
       this.goal = null;
     }
   }
 
+  /** Birds: from perch to perch, down to the grass to peck, into a tree when it rains, asleep on a perch at night. */
+  chooseFlight(st) {
+    const { night, rain } = st.sky;
+    const free = st.perches().filter((p) => !st.perchTaken.has(p.key) || st.perchTaken.get(p.key) === this);
+    const pick = (list) => list[Math.floor(Math.random() * list.length)];
+    const near = (list) => list.sort((a, c) => Math.hypot(a.x - this.x, a.y - this.y) - Math.hypot(c.x - this.x, c.y - this.y))[0];
+    let to = null, then = "idle";
+    if (rain) {
+      to = near(free.filter((p) => p.cover)) || null;
+      then = night ? "sleep" : "idle";
+      if (!to) { this.goal = { x: this.x, y: this.y, perch: this.perch, then: night ? "sleep" : "wet" }; return; }
+    } else if (night) {
+      to = this.perch || near(free) || null;
+      then = "sleep";
+      if (!to) { this.goal = { x: this.x, y: this.y, then: "sleep" }; return; }
+    } else {
+      const r = Math.random();
+      if (r < 0.5 && free.length) to = pick(free);
+      else if (r < 0.85) {
+        const v = st.view();
+        to = { x: rand(Math.max(90, v.x0 + 90), Math.min(W - 90, v.x1 - 90)), y: rand(FEET_MIN + 60, FEET_MAX - 10) };
+        if (st.inWater(to.x, to.y)) to.y = Math.min(FEET_MAX - 10, to.y + 90);
+        then = "peck";
+      } else { this.goal = null; return; }
+    }
+    this.goal = { x: to.x, y: to.y, perch: to.key ? to : null, then };
+  }
+
+  // ---------------------------------------------------------------- moving
   update(dt, st) {
-    if (st.decor) { if (this.mode === "walk") this.set("idle"); return; }
+    if (st.decor) { if (this.mode === "walk" || this.mode === "fly") this.set("idle"); return; }
+    if (this.move) return this.step(dt, st);
     this.timer -= dt;
     if (!this.goal && this.timer <= 0) {
       this.choose(st);
-      if (["home", "sleep", "wet"].includes(this.mode) && this.goal?.then === this.mode && Math.hypot(this.goal.x - this.x, this.goal.y - this.y) < 8) { this.goal = null; this.timer = 20; return; }
-      if (!this.goal) { this.timer = rand(2, 5); return; }
+      const g = this.goal;
+      if (["home", "sleep", "wet"].includes(this.mode) && g?.then === this.mode && Math.hypot(g.x - this.x, g.y - this.y) < 8) { this.goal = null; this.timer = 20; return; }
+      if (!g) { this.timer = rand(2, 5); return; }
     }
     if (!this.goal) return;
     const dx = this.goal.x - this.x, dy = this.goal.y - this.y;
     const dist = Math.hypot(dx, dy);
-    if (dist < 3) {
-      this.set(this.goal.then);
-      this.goal = null;
-      this.timer = this.mode === "idle" ? rand(2.5, 7) : 20;
-      this.draw();
-      return;
+    if (dist < 3) return this.arrive(st);
+    if (Math.abs(dx) > 2) this.face = dx < 0 ? -1 : 1;
+    if (this.gait === "fly") return this.takeOff(st, dist);
+    if (this.gait === "hop") {
+      this.set("hop");
+      const len = Math.min(dist, this.speed * 0.9 * (st.sky.rain && this.kind.rain !== "play" ? 1.4 : 1));
+      this.move = { kind: "hop", t: 0, fx: this.x, fy: this.y, tx: this.x + (dx / dist) * len, ty: this.y + (dy / dist) * len, rest: rand(0.15, 0.5) };
+      return this.step(0, st);
     }
+    // walk and waddle
     this.set("walk");
-    const step = Math.min(dist, this.speed * (st.sky.rain ? 1.7 : 1) * dt);
+    const step = Math.min(dist, this.speed * (st.sky.rain && this.kind.rain !== "play" ? 1.7 : 1) * dt);
     this.x += (dx / dist) * step;
     this.y += (dy / dist) * step;
-    if (Math.abs(dx) > 2) this.face = dx < 0 ? -1 : 1;
+    this.draw();
+  }
+
+  takeOff(st, dist) {
+    if (this.perch) st.perchTaken.delete(this.perch.key);
+    this.perch = null;
+    const to = this.goal.perch;
+    if (to) st.perchTaken.set(to.key, this);
+    this.move = { kind: "fly", t: 0, fx: this.x, fy: this.y, tx: this.goal.x, ty: this.goal.y, dur: dist / this.speed + 0.5, arc: Math.min(110, Math.max(36, dist * 0.25)) };
+    this.set("fly");
+    this.z = 2000;
+  }
+
+  /** One frame of a hop or a flight. */
+  step(dt, st) {
+    const m = this.move;
+    m.t += dt;
+    if (m.kind === "fly") {
+      const u = Math.min(1, m.t / m.dur);
+      const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      this.x = m.fx + (m.tx - m.fx) * e;
+      this.y = m.fy + (m.ty - m.fy) * e;
+      this.lift = Math.sin(Math.PI * u) * m.arc;
+      if (u >= 1) { this.move = null; this.lift = 0; return this.arrive(st); }
+      return this.draw();
+    }
+    // hop: crouch → air (an arc) → land → rest
+    const t = m.t, { crouch, air, land } = HOP;
+    if (t < crouch) this.setPhase("crouch");
+    else if (t < crouch + air) {
+      this.setPhase("air");
+      const u = (t - crouch) / air;
+      this.x = m.fx + (m.tx - m.fx) * u;
+      this.y = m.fy + (m.ty - m.fy) * u;
+      this.lift = Math.sin(Math.PI * u) * 30 * this.size;
+    } else if (t < crouch + air + land) {
+      this.setPhase("land");
+      this.x = m.tx; this.y = m.ty; this.lift = 0;
+    } else {
+      this.setPhase(null);
+      if (t >= crouch + air + land + m.rest) this.move = null;
+    }
+    this.draw();
+  }
+
+  arrive(st) {
+    const g = this.goal;
+    this.x = g.x; this.y = g.y;
+    if (g.perch) { this.perch = g.perch; this.z = g.perch.z; }
+    else if (this.gait === "fly") this.z = null;
+    this.set(g.then);
+    this.goal = null;
+    this.timer = this.mode === "idle" ? rand(2.5, 7) : this.mode === "peck" ? rand(1.5, 3) : 20;
+    if (this.mode === "peck") setTimeout(() => { if (this.mode === "peck") this.set("idle"); }, 1400);
     this.draw();
   }
 }

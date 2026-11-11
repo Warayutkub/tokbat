@@ -283,3 +283,20 @@ fn halving_prices_refunds_what_was_bought_before() {
     assert_eq!(again, 3);
     assert_eq!(game::PET_PRICE, 60);
 }
+
+#[test]
+fn the_catalogue_knows_six_kinds_of_animal_and_how_they_move() {
+    let m = game::manifest();
+    let gait = |id: &str| m["species"].as_array().unwrap().iter().find(|s| s["id"] == id).map(|s| s["gait"].as_str().unwrap().to_string());
+    assert_eq!(gait("rabbit").as_deref(), Some("hop"));
+    assert_eq!(gait("bird").as_deref(), Some("fly"));
+    assert_eq!(gait("duck").as_deref(), Some("waddle"));
+    for sp in ["cat", "dog", "rabbit", "frog", "bird", "duck"] {
+        let colours = m["pets"].as_array().unwrap().iter().filter(|p| p["species"] == sp).count();
+        assert_eq!(colours, 4, "{sp}");
+    }
+    let t = api();
+    t.state();
+    assert_eq!(t.call("pet_adopt", json!([{"species": "frog", "color": "green", "name": "อ๊บอ๊บ"}]))["pet"]["species"], "frog");
+    assert!(m["items"].as_array().unwrap().iter().any(|i| i["id"] == "pond" && i["water"].is_array()));
+}

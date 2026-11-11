@@ -1,4 +1,5 @@
-//! Content packs: new garden items and pet colours, published on GitHub Pages and installed while online.
+//! Content packs: new garden items, pet colours and kinds of animal (that move with a gait the app knows),
+//! published on GitHub Pages and installed while online.
 //!
 //! A pack is pack.json + pack.sig + drawings. pack.sig is an ed25519 signature over the exact bytes of pack.json,
 //! and pack.json holds the sha256 of every drawing, so one check covers everything. The page downloads a pack;
@@ -17,8 +18,11 @@ use std::path::{Path, PathBuf};
 pub const PACK_PUBKEY: [u8; 32] = hex32("ca5d9c73da7e89f068491a4272283fc80f9183b078b6e755e0086ed50ea71fa0");
 const CATS: [&str; 7] = ["trees", "plants", "homes", "farm", "toys", "decor", "ground"];
 const RARITY: [&str; 3] = ["common", "rare", "special"];
-const SPECIES: [(&str, &str); 3] = [("cat", "แมว"), ("dog", "หมา"), ("rabbit", "กระต่าย")];
 const FLAGS: [&str; 4] = ["shelter", "ground", "bed", "light"];
+/// How the app can move an animal (web/js/garden/stage.js). A pack's species must use one of these.
+pub const GAITS: [&str; 4] = ["walk", "hop", "fly", "waddle"];
+const RAIN: [&str; 2] = ["shelter", "play"];
+const WATER: [&str; 3] = ["none", "near", "swim"];
 /// Items of a pack show "ของใหม่" this long after it arrives.
 pub const NEW_DAYS: i64 = 14;
 
@@ -108,8 +112,31 @@ fn sha256(text: &str) -> String {
     Sha256::digest(text.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// Everything a pack must be before it touches the disk. `taken` = item ids and pet colours that already exist elsewhere.
-pub fn check(key: &[u8; 32], pack_text: &str, sig_b64: &str, files: &HashMap<String, String>, taken_items: &HashSet<String>, taken_pets: &HashSet<String>) -> Result<Value, String> {
+fn unit(v: &Value) -> bool {
+    v.as_f64().is_some_and(|x| (0.0..=1.0).contains(&x))
+}
+
+/// Bird perches ([[x, y], …] as fractions of the drawing) and a water area ([cx, cy, rx, ry]) on an item.
+fn spots_ok(it: &Value) -> bool {
+    let perch = it.get("perch").is_none_or(|v| v.as_array().is_some_and(|a| a.len() <= 8 && a.iter().all(|p| p.as_array().is_some_and(|q| q.len() == 2 && q.iter().all(unit)))));
+    let water = it.get("water").is_none_or(|v| v.as_array().is_some_and(|a| a.len() == 4 && a.iter().all(unit)));
+    perch && water
+}
+
+/// A new kind of animal: an id, a name and a gait the app knows; size is its share of the pet box.
+fn species_ok(sp: &Value) -> bool {
+    let txt = |k: &str| sp[k].as_str().unwrap_or("");
+    valid_id(txt("id")) && !txt("name").trim().is_empty() && GAITS.contains(&txt("gait"))
+        && sp["size"].as_f64().is_some_and(|x| (0.3..=1.2).contains(&x))
+        && sp.get("speed").is_none_or(|v| v.as_f64().is_some_and(|x| (10.0..=200.0).contains(&x)))
+        && sp.get("rain").is_none_or(|v| RAIN.contains(&v.as_str().unwrap_or("")))
+        && sp.get("water").is_none_or(|v| WATER.contains(&v.as_str().unwrap_or("")))
+        && sp.as_object().is_some_and(|o| o.keys().all(|k| ["id", "name", "gait", "size", "speed", "rain", "water"].contains(&k.as_str())))
+}
+
+/// Everything a pack must be before it touches the disk. `taken` = item ids and pet colours that already exist
+/// elsewhere; `species` = kinds of animal that already exist (the pack may add more).
+pub fn check(key: &[u8; 32], pack_text: &str, sig_b64: &str, files: &HashMap<String, String>, taken_items: &HashSet<String>, taken_pets: &HashSet<String>, species: &HashSet<String>) -> Result<Value, String> {
     let vk = VerifyingKey::from_bytes(key).map_err(|_| "กุญแจตรวจแพ็กเสีย")?;
     let sig = base64::engine::general_purpose::STANDARD.decode(sig_b64.trim()).map_err(|_| "ลายเซ็นอ่านไม่ได้")?;
     let sig = Signature::from_slice(&sig).map_err(|_| "ลายเซ็นอ่านไม่ได้")?;
@@ -141,17 +168,25 @@ pub fn check(key: &[u8; 32], pack_text: &str, sig_b64: &str, files: &HashMap<Str
         let ok = CATS.contains(&it["cat"].as_str().unwrap_or("")) && RARITY.contains(&it["rarity"].as_str().unwrap_or(""))
             && (1..=500).contains(&it["price"].as_i64().unwrap_or(0)) && !it["name"].as_str().unwrap_or("").trim().is_empty()
             && it["w"].as_f64().is_some_and(|w| w > 0.0 && w < 2000.0) && it["h"].as_f64().is_some_and(|h| h > 0.0 && h < 2000.0)
-            && it.as_object().is_some_and(|o| o.keys().all(|k| ["id", "name", "cat", "price", "rarity", "w", "h", "file"].contains(&k.as_str()) || FLAGS.contains(&k.as_str())));
+            && spots_ok(&it)
+            && it.as_object().is_some_and(|o| o.keys().all(|k| ["id", "name", "cat", "price", "rarity", "w", "h", "file", "perch", "water"].contains(&k.as_str()) || FLAGS.contains(&k.as_str())));
         if !ok {
             return Err(format!("ข้อมูลของ {iid} ไม่ถูกต้อง"));
         }
         need_file(&it["file"])?;
     }
+    let mut kinds = species.clone();
+    for sp in p["species"].as_array().cloned().unwrap_or_default() {
+        let sid = sp["id"].as_str().unwrap_or("");
+        if !species_ok(&sp) || !kinds.insert(sid.to_string()) {
+            return Err(format!("ชนิดสัตว์ {sid} ซ้ำหรือไม่ถูกต้อง"));
+        }
+    }
     for pet in p["pets"].as_array().cloned().unwrap_or_default() {
         let sp = pet["species"].as_str().unwrap_or("");
         let color = pet["color"].as_str().unwrap_or("");
         let key = format!("{sp}-{color}");
-        if !SPECIES.iter().any(|(s, _)| *s == sp) || !valid_id(color) || taken_pets.contains(&key) || pet["colorName"].as_str().unwrap_or("").trim().is_empty() {
+        if !kinds.contains(sp) || !valid_id(color) || taken_pets.contains(&key) || pet["colorName"].as_str().unwrap_or("").trim().is_empty() {
             return Err(format!("สัตว์ {key} ซ้ำหรือไม่ถูกต้อง"));
         }
         need_file(&pet["file"])?;
@@ -180,21 +215,26 @@ pub struct Installed {
     pub installed_at: String,
 }
 
-fn taken(base: &Value, others: &[Installed], skip: &str) -> (HashSet<String>, HashSet<String>) {
-    let mut items: HashSet<String> = base["items"].as_array().map(|a| a.iter().filter_map(|i| i["id"].as_str().map(String::from)).collect()).unwrap_or_default();
-    let mut pets: HashSet<String> = base["pets"].as_array().map(|a| a.iter().map(|p| format!("{}-{}", p["species"].as_str().unwrap_or(""), p["color"].as_str().unwrap_or(""))).collect()).unwrap_or_default();
+type Taken = (HashSet<String>, HashSet<String>, HashSet<String>);
+
+/// Item ids, pet colours (species-color) and species that exist outside the pack being checked.
+fn taken(base: &Value, others: &[Installed], skip: &str) -> Taken {
+    let ids = |v: &Value, key: &str| -> Vec<String> { v[key].as_array().into_iter().flatten().filter_map(|i| i["id"].as_str().map(String::from)).collect() };
+    let pet_keys = |v: &Value| -> Vec<String> { v["pets"].as_array().into_iter().flatten().map(|p| format!("{}-{}", p["species"].as_str().unwrap_or(""), p["color"].as_str().unwrap_or(""))).collect() };
+    let (mut items, mut pets, mut species): Taken = (ids(base, "items").into_iter().collect(), pet_keys(base).into_iter().collect(), ids(base, "species").into_iter().collect());
     for o in others.iter().filter(|o| o.pack["id"] != skip) {
-        items.extend(o.pack["items"].as_array().into_iter().flatten().filter_map(|i| i["id"].as_str().map(String::from)));
-        pets.extend(o.pack["pets"].as_array().into_iter().flatten().map(|p| format!("{}-{}", p["species"].as_str().unwrap_or(""), p["color"].as_str().unwrap_or(""))));
+        items.extend(ids(&o.pack, "items"));
+        pets.extend(pet_keys(&o.pack));
+        species.extend(ids(&o.pack, "species"));
     }
-    (items, pets)
+    (items, pets, species)
 }
 
 /// Checks, then writes the pack into dir/<id> (replacing an older version).
 pub fn install(dir: &Path, key: &[u8; 32], base: &Value, others: &[Installed], pack_text: &str, sig: &str, files: &HashMap<String, String>, now: &str) -> Result<Installed, String> {
     let id = serde_json::from_str::<Value>(pack_text).ok().and_then(|v| v["id"].as_str().map(String::from)).unwrap_or_default();
-    let (ti, tp) = taken(base, others, &id);
-    let p = check(key, pack_text, sig, files, &ti, &tp)?;
+    let (ti, tp, ts) = taken(base, others, &id);
+    let p = check(key, pack_text, sig, files, &ti, &tp, &ts)?;
     let version = p["version"].as_i64().unwrap_or(0);
     if let Some(old) = others.iter().find(|o| o.pack["id"] == p["id"]) {
         if old.pack["version"].as_i64().unwrap_or(0) > version {
@@ -235,8 +275,8 @@ pub fn load_all(dir: &Path, key: &[u8; 32], base: &Value) -> Vec<Installed> {
         let Ok(meta) = serde_json::from_str::<Value>(&text) else { continue };
         let files: HashMap<String, String> = meta["files"].as_object().map(|o| o.keys().filter(|k| valid_path(k)).filter_map(|k| std::fs::read_to_string(d.join(k)).ok().map(|t| (k.clone(), t))).collect()).unwrap_or_default();
         let id = meta["id"].as_str().unwrap_or("").to_string();
-        let (ti, tp) = taken(base, &out, &id);
-        if let Ok(p) = check(key, &text, &sig, &files, &ti, &tp) {
+        let (ti, tp, ts) = taken(base, &out, &id);
+        if let Ok(p) = check(key, &text, &sig, &files, &ti, &tp, &ts) {
             let at = std::fs::read_to_string(d.join("installed.json")).ok().and_then(|t| serde_json::from_str::<Value>(&t).ok()).and_then(|v| v["installed_at"].as_str().map(String::from)).unwrap_or_default();
             out.push(Installed { pack: p, installed_at: at });
         }
@@ -267,8 +307,12 @@ pub fn merge(base: &Value, packs: &[Installed], today: chrono::NaiveDate) -> Val
         };
         let items: Vec<Value> = p.pack["items"].as_array().cloned().unwrap_or_default().into_iter().map(tag).collect();
         let pets: Vec<Value> = p.pack["pets"].as_array().cloned().unwrap_or_default().into_iter().map(tag).collect();
+        let species: Vec<Value> = p.pack["species"].as_array().cloned().unwrap_or_default().into_iter().map(tag).collect();
         cat["items"].as_array_mut().unwrap().extend(items);
         cat["pets"].as_array_mut().unwrap().extend(pets);
+        if let Some(list) = cat["species"].as_array_mut() {
+            list.extend(species);
+        }
     }
     cat
 }

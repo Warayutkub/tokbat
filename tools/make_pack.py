@@ -33,7 +33,8 @@ from slim import size, unsafe  # noqa: E402
 BASE = json.loads((HERE.parent / "web/garden/base/manifest.json").read_text(encoding="utf-8"))
 CATS = {"trees", "plants", "homes", "farm", "toys", "decor", "ground"}
 RARITY = {"common", "rare", "special"}
-SPECIES = {"cat": "แมว", "dog": "หมา", "rabbit": "กระต่าย"}
+SPECIES = {sp["id"]: sp["name"] for sp in BASE.get("species", [])}
+GAITS = {"walk", "hop", "fly", "waddle"}  # src-tauri/src/packs.rs GAITS
 FLAGS = {"shelter", "ground", "bed", "light"}
 ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 PATH = re.compile(r"^(props|pets)/[a-z0-9][a-z0-9-]{0,59}\.svg$")
@@ -76,9 +77,18 @@ def build(src, out):
         if not it.get("name", "").strip():
             fail(f"{it['id']}: name is empty")
         w, h = take(it["file"])
-        extra = {k: it[k] for k in FLAGS if k in it}
+        extra = {k: it[k] for k in [*FLAGS, "perch", "water"] if k in it}
         items.append({"id": it["id"], "name": it["name"].strip(), "cat": it["cat"], "price": it["price"], "rarity": it["rarity"],
                       "w": w, "h": h, "file": it["file"], **extra})
+    species = []
+    for sp in spec.get("species", []):
+        ok = (ID.match(sp.get("id", "")) and sp["id"] not in SPECIES and sp.get("name", "").strip() and sp.get("gait") in GAITS
+              and isinstance(sp.get("size"), (int, float)) and 0.3 <= sp["size"] <= 1.2
+              and sp.get("rain", "shelter") in ("shelter", "play") and sp.get("water", "none") in ("none", "near", "swim"))
+        if not ok:
+            fail(f"species {sp.get('id')!r}: id, name, gait {sorted(GAITS)}, size 0.3-1.2, rain shelter/play, water none/near/swim")
+        SPECIES[sp["id"]] = sp["name"].strip()
+        species.append({k: sp[k] for k in ("id", "name", "gait", "size", "speed", "rain", "water") if k in sp})
     base_pets = {(p["species"], p["color"]) for p in BASE["pets"]}
     for p in spec.get("pets", []):
         key = (p.get("species"), p.get("color"))
@@ -93,6 +103,8 @@ def build(src, out):
 
     pack = {"format": 1, "id": pid, "version": version, "title": title, "items": items, "pets": pets,
             "files": {k: hashlib.sha256(v.encode("utf-8")).hexdigest() for k, v in sorted(files.items())}}
+    if species:  # new kinds of animal need app 0.4.0 or later
+        pack = {**pack, "species": species}
     body = json.dumps(pack, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     sig = base64.b64encode(load().sign(body)).decode("ascii")
 

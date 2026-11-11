@@ -8,7 +8,8 @@
 import re
 
 PARTS = {"leg-back-far", "leg-back-near", "leg-front-far", "leg-front-near", "tail", "body", "head", "ear-l", "ear-r", "face", "eye-l", "eye-r",
-         "pupil", "cheeks", "mouth", "tongue", "dust", "stem", "leaf", "trunk", "canopy", "fronds", "fronds-back", "lamp"}
+         "pupil", "cheeks", "mouth", "tongue", "dust", "stem", "leaf", "trunk", "canopy", "fronds", "fronds-back", "lamp",
+         "leg-far", "leg-near", "wing-far", "wing-near", "beak"}
 
 # anything here means the file is refused (the app checks the same list before installing a pack)
 UNSAFE = [r"<script", r"<foreignObject", r"<iframe", r"<!ENTITY", r"<!DOCTYPE", r"\son[a-z]+\s*=", r"javascript:", r"data:text/html",

@@ -1,11 +1,9 @@
 // ร้านค้า — items by category, details on the right, price and what's left after buying.
 import { call } from "../api.js";
 import { h, raw, icon, button, chip, toast } from "../ui.js";
-import { manifest, itemSvg, coinSvg, CATS, RARITY } from "../garden/art.js";
+import { manifest, itemSvg, coinSvg, CATS, RARITY, speciesName } from "../garden/art.js";
 import { setCoins } from "./garden.js";
 import { stamp } from "../garden/packs.js";
-
-const SPECIES_TH = { cat: "แมว", dog: "หมา", rabbit: "กระต่าย" };
 
 export async function render(root, params, ctx) {
   const [m, st0] = await Promise.all([manifest(), call("garden_state")]);
@@ -53,8 +51,10 @@ export async function render(root, params, ctx) {
       `หมวด${CATS.find(([k]) => k === d.cat)[1]}`, `ของ${RARITY[d.rarity]}`,
       d.ground ? "อยู่ใต้ทุกอย่าง สัตว์เดินทับได้" : null,
       d.shelter ? "สัตว์มาหลบฝนได้" : null,
-      d.bed ? `เป็นที่นอนของ${d.bed.map((s) => SPECIES_TH[s]).join(" ")}` : null,
+      d.bed ? `เป็นที่นอนของ${d.bed.map((s) => speciesName(m, s)).join(" ")}` : null,
       d.light ? "มีไฟตอนกลางคืน" : null,
+      d.perch ? "นกมาเกาะได้" : null,
+      d.water ? "เป็ดลงว่ายได้ กบชอบมานั่งริมขอบ" : null,
     ].filter(Boolean).join(" · ");
     const after = st.balance - d.price;
     const buy = button(after >= 0 ? `ซื้อ ${d.price} เหรียญ` : `เหรียญไม่พอ (ขาด ${-after})`, { kind: "primary", disabled: after < 0, onclick: () => doBuy(d, buy) });

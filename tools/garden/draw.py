@@ -298,10 +298,28 @@ def clip_convex(subject, clip):
     return out
 
 
+def hull(pts):
+    """Convex hull (monotone chain), counter-clockwise."""
+    p = sorted(set((round(x, 2), round(y, 2)) for x, y in pts))
+    if len(p) < 3:
+        return p
+
+    def half(seq):
+        out = []
+        for q in seq:
+            while len(out) >= 2 and (out[-1][0] - out[-2][0]) * (q[1] - out[-2][1]) - (out[-1][1] - out[-2][1]) * (q[0] - out[-2][0]) <= 0:
+                out.pop()
+            out.append(q)
+        return out
+
+    lo, hi = half(p), half(p[::-1])
+    return lo[:-1] + hi[:-1]
+
+
 def coat(outline_pts, patches, grow=1.6):
     """Flat coat patches (calico, cow, tabby saddle) kept inside a body part: each patch is a rough blob, cut to
     the part's own curve pushed out a little so the pen outline drawn over it hides the cut edge."""
-    loop = cr_loop(outline_pts)
+    loop = hull(cr_loop(outline_pts))  # the cut needs a convex outline; keep patches clear of any dents yourself
     cx = sum(x for x, _ in loop) / len(loop)
     cy = sum(y for _, y in loop) / len(loop)
     big = []
@@ -390,6 +408,110 @@ def rabbit(colors, seed=31):
             a.group("mouth", a.line_([(132, 101), (135.5, 104.5), (138.5, 101.5), (141.5, 104.5), (145, 101)], width=3.0, jit=0.2))]
     body = legs + tail + torso + a.group("head", *ears, head, a.group("face", *face))
     return svg(PW, PH, body + dust([(68, 164, 2.4), (80, 168, 1.6), (124, 166, 2.2), (140, 162, 1.4), (146, 168, 1.8)]), "Pet/rabbit")
+
+
+# ------------------------------------------------------------------ 0.4.0: animals that hop, fly, waddle and swim
+# Same construction as the cat/dog/rabbit (200 x 180 box, feet near y 160, outline 5, ink stick legs 7, huge eyes,
+# pink cheeks, one-stroke mouth, dust). Every moving part is its own group so the gait can move it.
+def frog(colors, seed=41):
+    """colors: body, belly, spot (or None). Sits wide and low; big eyes on bumps on top; a folded thigh, feet forward."""
+    a = pet_art(seed)
+    B = colors["body"]
+    body_pts = [(50, 142), (54, 120), (70, 104), (98, 96), (128, 94), (152, 100), (168, 116), (168, 138), (152, 152), (112, 156), (72, 154)]
+    patches = [(colors["belly"], [(96, 136), (156, 126), (172, 152), (96, 164)])]
+    if colors.get("spot"):
+        patches += [(colors["spot"], ellipse(x, y, rx, ry, 9)) for x, y, rx, ry in ((80, 116, 8, 6), (100, 108, 6, 5), (66, 130, 5, 4))]
+    legs = [a.group("leg-back-far", a.line_([(56, 148), (58, 160), (74, 161)], width=7, jit=0.4)),
+            a.group("leg-front-far", a.line_([(142, 148), (144, 161)], width=7, jit=0.4))]
+    thigh = a.shape(ellipse(80, 140, 21, 13, 10, rot=-0.35), B, jit=0.4, misreg=0)
+    legs_near = [a.group("leg-back-near", a.line_([(70, 150), (72, 161), (94, 161)], width=7, jit=0.4), thigh),
+                 a.group("leg-front-near", a.line_([(158, 147), (162, 161)], width=7, jit=0.4))]
+    bumps = [a.shape(ellipse(124, 88, 17, 16, 10), B, jit=0.4, misreg=0), a.shape(ellipse(152, 86, 18, 17, 10), B, jit=0.4, misreg=0)]
+    face = [big_eyes(a, (124, 86, 11.2), (152, 84, 11.8), look=(2.2, 1.3), pupil=5.2), pink(a, [(132, 113), (167, 109)], r=(5.5, 3.6)),
+            a.group("mouth", a.line_([(134, 121), (145, 127), (158, 126), (167, 118)], width=3.2, jit=0.25))]
+    body = a.group("body", a.shape(body_pts, B, misreg=0, inner=coat(body_pts, patches)))
+    head = a.group("head", *bumps, a.group("face", *face))
+    out = "".join(legs) + body + head + "".join(legs_near)
+    return svg(PW, PH, out + dust([(54, 167, 2.4), (66, 171, 1.6), (134, 168, 2.2), (150, 165, 1.4), (160, 170, 1.8)]), "Pet/frog")
+
+
+def bird(colors, seed=51):
+    """colors: body, wing, belly, beak. A small round bird: head on top-front, wings that can open, fan tail."""
+    a = pet_art(seed)
+    B, Wg = colors["body"], colors["wing"]
+    legs = [a.group("leg-far", a.line_([(96, 138), (94, 160), (101, 160)], width=6, jit=0.4)),
+            a.group("leg-near", a.line_([(110, 138), (112, 160), (120, 160)], width=6, jit=0.4))]
+    tail = a.group("tail", a.shape([(66, 116), (40, 98), (44, 112), (38, 120), (64, 128)], Wg, jit=0.5, misreg=0))
+    wing_far = a.group("wing-far", a.shape([(86, 98), (98, 86), (112, 92), (104, 104)], darker(Wg, 0.9), jit=0.4, misreg=0))
+    body_pts = ellipse(98, 118, 38, 30, 12)
+    body = a.group("body", a.shape(body_pts, B, misreg=0, inner=coat(body_pts, [(colors["belly"], [(96, 126), (128, 112), (142, 142), (98, 156)])])))
+    wing_near = a.group("wing-near", a.shape([(76, 110), (100, 104), (116, 114), (102, 130), (80, 128)], Wg, jit=0.4, misreg=0))
+    head_pts = ellipse(130, 84, 27, 26, 12)
+    face = [big_eyes(a, (122, 82, 8.8), (142, 80, 9.2), look=(1.8, 1.0), pupil=4.4), pink(a, [(118, 96), (148, 94)], r=(4.6, 3.0)),
+            a.group("beak", a.shape([(154, 84), (170, 89), (154, 95)], colors["beak"], jit=0.2, misreg=0, wide=3.2))]
+    head = a.group("head", a.shape(head_pts, B, misreg=0), a.group("face", *face))
+    return svg(PW, PH, "".join(legs) + tail + wing_far + body + wing_near + head + dust([(84, 166, 2.0), (94, 169, 1.4), (118, 167, 1.8), (128, 164, 1.2)]), "Pet/bird")
+
+
+def duck(colors, seed=61):
+    """colors: body, head, wing, bill, ring (or None). Boat-shaped body, tail tip up, a round head on a short neck, flat bill."""
+    a = pet_art(seed)
+    B, Hd = colors["body"], colors.get("head", colors["body"])
+    legs = [a.group("leg-far", a.line_([(90, 144), (88, 160), (96, 161)], width=6.5, jit=0.4)),
+            a.group("leg-near", a.line_([(106, 145), (108, 161), (117, 161)], width=6.5, jit=0.4))]
+    tail = a.group("tail", a.shape([(56, 118), (40, 96), (66, 106)], B, jit=0.4, misreg=0))
+    body = a.group("body", a.shape([(50, 120), (60, 106), (86, 102), (120, 104), (142, 112), (148, 128), (134, 144), (98, 150), (66, 146), (52, 134)], B, misreg=0))
+    wing = a.group("wing-near", a.shape([(72, 114), (104, 110), (122, 120), (100, 134), (76, 130)], colors["wing"], jit=0.4, misreg=0))
+    neck_pts = [(124, 116), (126, 92), (138, 84), (152, 92), (148, 116)]
+    ring = colors.get("ring")
+    neck = a.shape(neck_pts, Hd, jit=0.4, misreg=0, inner=coat(neck_pts, [(ring, [(118, 99), (160, 97), (160, 105), (118, 107)])]) if ring else "")
+    head_pts = ellipse(146, 72, 27, 25, 12)
+    face = [big_eyes(a, (138, 70, 9.6), (157, 69, 9.4), look=(1.8, 1.0), pupil=4.6), pink(a, [(132, 85), (162, 84)], r=(4.8, 3.2)),
+            a.group("beak", a.shape([(164, 74), (186, 75), (190, 82), (184, 87), (164, 86)], colors["bill"], jit=0.25, misreg=0, wide=3.4))]
+    head = a.group("head", neck, a.shape(head_pts, Hd, misreg=0), a.group("face", *face))
+    return svg(PW, PH, "".join(legs) + tail + body + wing + head + dust([(76, 167, 2.2), (88, 170, 1.5), (118, 168, 2.0), (130, 165, 1.3)]), "Pet/duck")
+
+
+FROGS = {
+    "เขียว": {"body": "#8CCB5E", "belly": "#E3F4C6"},
+    "เหลือง": {"body": "#F2D45C", "belly": "#FFF4C7", "spot": "#D8A93A"},
+    "ฟ้า": {"body": "#7FC4E8", "belly": "#DDF1FB", "spot": "#4E95C2"},
+    "น้ำตาล": {"body": "#B58A5A", "belly": "#F1DFC6", "spot": "#8A6440"},
+}
+BIRDS = {
+    "ฟ้า": {"body": "#86C0F2", "wing": "#5E9FDB", "belly": "#E3F1FC", "beak": "#FFB347"},
+    "เหลือง": {"body": "#FFD95C", "wing": "#F2B93A", "belly": "#FFF3C4", "beak": "#FF9A47"},
+    "แดง": {"body": "#F08A72", "wing": "#D9654F", "belly": "#FFE1D6", "beak": "#FFC247"},
+    "น้ำตาล": {"body": "#C29A72", "wing": "#99714C", "belly": "#F3E4D2", "beak": "#FFB347"},
+}
+DUCKS = {
+    "ขาว": {"body": "#FFFFFF", "wing": "#EEF1F5", "bill": "#FFA94D"},
+    "เหลือง": {"body": "#FFE07A", "wing": "#F5C94E", "bill": "#FF9F43"},
+    "น้ำตาล": {"body": "#C29A72", "head": "#A97F57", "wing": "#8F6845", "bill": "#E3A13E"},
+    "หัวเขียว": {"body": "#C9CED6", "head": "#4F9E6A", "wing": "#9AA3B0", "bill": "#F2C14E", "ring": "#FFFFFF"},
+}
+
+
+def pose(svg_text, moves=None, hide=(), extra=""):
+    """A keyframe of a gait: `moves` maps a part id to an SVG transform, `hide` drops parts, `extra` is drawn on top."""
+    for gid, t in (moves or {}).items():
+        svg_text = svg_text.replace(f'<g id="{gid}">', f'<g id="{gid}" transform="{t}">', 1)
+    for gid in hide:
+        svg_text = svg_text.replace(f'<g id="{gid}">', f'<g id="{gid}" opacity="0">', 1)
+    if extra:
+        svg_text = svg_text.replace("</g></svg>", extra + "</g></svg>")
+    return svg_text
+
+
+def water_line(y=128, seed=71):
+    """Pond water over the lower half of a swimming bird: a band with a pen line on top and two light ripples."""
+    a = pet_art(seed)
+    top = [(30 + i * 14, y + (3 if i % 2 else -2)) for i in range(11)]
+    band = a.shape(top + [(176, y + 14), (156, y + 30), (100, y + 36), (44, y + 30), (24, y + 14)], "#8FD0F2", jit=0.4, misreg=0, outline=False)
+    line = a.line_(top, width=4, jit=0.3)
+    rip = a.line_([(52, y + 18), (68, y + 14), (84, y + 18)], width=3, color="#D3F0FD", jit=0.2) + \
+        a.line_([(118, y + 22), (134, y + 18), (150, y + 22)], width=3, color="#D3F0FD", jit=0.2)
+    return a.group("water", band, line, rip)
 
 
 # colour sets (natural colours; the app UI palette does not apply inside the garden)

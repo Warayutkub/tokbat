@@ -143,3 +143,42 @@ fn a_pack_can_add_a_pet_colour() {
     let r = t.call("pet_adopt", json!([{"species": "cat", "color": "pink", "name": "ชมพู่"}]));
     assert_eq!(r["pet"]["color"], "pink", "{r}");
 }
+
+fn signed(p: Value, files: Value) -> (String, String, Value) {
+    let text = p.to_string();
+    let sig = base64::engine::general_purpose::STANDARD.encode(key().sign(text.as_bytes()).to_bytes());
+    (text, sig, files)
+}
+
+#[test]
+fn a_pack_can_add_a_kind_of_animal_that_moves_like_one_the_app_knows() {
+    let t = api();
+    let file = "pets/goose-white.svg";
+    let goose = |gait: &str| json!({"format": 1, "id": "geese", "version": 1, "title": "ห่าน", "items": [],
+        "species": [{"id": "goose", "name": "ห่าน", "gait": gait, "size": 0.95, "speed": 36, "rain": "play", "water": "swim"}],
+        "pets": [{"species": "goose", "color": "white", "colorName": "ขาว", "speciesName": "ห่าน", "w": 60.0, "h": 80.0, "file": file}],
+        "files": {file: sha(SVG)}});
+    assert_eq!(install(&t, signed(goose("teleport"), json!({file: SVG})))["ok"], false, "a gait the app can't play");
+    assert_eq!(install(&t, signed(goose("waddle"), json!({file: SVG})))["ok"], true);
+    let cat = t.call("garden_catalog", json!([]));
+    let sp = cat["species"].as_array().unwrap().iter().find(|s| s["id"] == "goose").cloned().unwrap();
+    assert_eq!((sp["gait"].as_str(), sp["pack"].as_str()), (Some("waddle"), Some("geese")));
+    assert_eq!(t.call("pet_adopt", json!([{"species": "goose", "color": "white", "name": "ห่านน้อย"}]))["pet"]["species"], "goose");
+    // a pet of a kind nobody added is refused
+    let stray = json!({"format": 1, "id": "stray", "version": 1, "title": "x", "items": [],
+        "pets": [{"species": "dragon", "color": "red", "colorName": "แดง", "speciesName": "มังกร", "w": 60.0, "h": 80.0, "file": "pets/dragon-red.svg"}],
+        "files": {"pets/dragon-red.svg": sha(SVG)}});
+    assert_eq!(install(&t, signed(stray, json!({"pets/dragon-red.svg": SVG})))["ok"], false);
+}
+
+#[test]
+fn pack_items_can_carry_perches_and_water_but_only_sane_numbers() {
+    let t = api();
+    let file = "props/birdbath.svg";
+    let bath = |perch: Value| json!({"format": 1, "id": "bath", "version": 1, "title": "อ่างนก",
+        "items": [{"id": "birdbath", "name": "อ่างน้ำนก", "cat": "decor", "price": 20, "rarity": "common", "w": 60.0, "h": 80.0, "file": file,
+                   "perch": perch, "water": [0.5, 0.2, 0.4, 0.1]}],
+        "pets": [], "files": {file: sha(SVG)}});
+    assert_eq!(install(&t, signed(bath(json!([[0.5, 3.0]])), json!({file: SVG})))["ok"], false, "perch outside the drawing");
+    assert_eq!(install(&t, signed(bath(json!([[0.2, 0.1], [0.8, 0.1]])), json!({file: SVG})))["ok"], true);
+}

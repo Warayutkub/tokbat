@@ -1,7 +1,7 @@
 // บ้าน — the garden: pets living in it, a slim HUD (today's work, quests, punch card), rewards and decorating.
 import { call } from "../api.js";
 import { h, raw, icon, button, toast, showDialog, mascot, hm, fmtHours } from "../ui.js";
-import { manifest, coinSvg, pawSvg, RARITY, itemSvg, petSvg, SPECIES } from "../garden/art.js";
+import { manifest, coinSvg, pawSvg, RARITY, itemSvg, petSvg, speciesName } from "../garden/art.js";
 import { Stage, ZOOMS } from "../garden/stage.js";
 import { skyAt } from "../garden/weather.js";
 import { startDecorate } from "../garden/decorate.js";
@@ -142,7 +142,7 @@ export async function render(root, params, ctx) {
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
     const close = showDialog(h("div.dialog__panel.sketch.sketch--card.pet-card", { role: "document" }, art,
       h("h2.dialog__title", {}, p.name),
-      h("p.hint", { style: { fontSize: "14px" } }, `${SPECIES[p.species]}สี${look?.colorName || ""} · ${days ? `อยู่ด้วยกันมา ${days} วัน` : "เพิ่งมาอยู่ด้วยวันนี้"}`),
+      h("p.hint", { style: { fontSize: "14px" } }, `${speciesName(m, p.species)}สี${look?.colorName || ""} · ${days ? `อยู่ด้วยกันมา ${days} วัน` : "เพิ่งมาอยู่ด้วยวันนี้"}`),
       h("label.field", {}, h("span.field__label", {}, "เปลี่ยนชื่อ"), h("span.input.sketch", {}, input), err),
       h("div.dialog__actions", {}, button("ปิด", { onclick: () => close() }), button("บันทึกชื่อ", { kind: "primary", onclick: save }))));
     input.select();
