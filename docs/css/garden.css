@@ -100,8 +100,9 @@
 .g-pet[data-gait="fly"].is-flying :is(.leg-near, .leg-far, .dust), .g-pet[data-gait="fly"].is-perched .dust { opacity: 0; }
 .g-pet[data-gait="fly"].is-pecking .head { transform-origin: 24% 88%; animation: peck 0.45s ease-in-out 3; }
 .g-pet[data-gait="fly"].is-happy .wing-near { animation: flap 0.16s ease-in-out 4 alternate; }
-@keyframes flap { from { transform: rotate(35deg); } to { transform: rotate(-70deg); } }
-@keyframes flap-far { from { transform: rotate(25deg); } to { transform: rotate(-55deg); } }
+/* wings hinge at the shoulder: + lifts the wing tip above the back, − brings it down below the body */
+@keyframes flap { from { transform: rotate(72deg); } to { transform: rotate(-24deg); } }
+@keyframes flap-far { from { transform: rotate(60deg); } to { transform: rotate(-18deg); } }
 @keyframes peck { 50% { transform: rotate(38deg); } }
 /* waddle (duck): sway from side to side; in the water the lower half goes under and the legs stop */
 .g-pet[data-gait="waddle"].is-walking .g-bob { transform-origin: 50% 100%; animation: waddle 0.34s ease-in-out infinite alternate; }
@@ -122,7 +123,9 @@
 .g-pet[data-gait="fly"].is-happy .wing-far { animation: flap-far 0.16s ease-in-out 4 alternate; }
 .g-pet[data-gait="waddle"].is-happy .g-bob, .g-pet[data-gait="waddle"].is-walking.is-happy .g-bob { animation: quack 0.7s ease-in-out; }
 .g-pet[data-gait="waddle"].is-swimming.is-happy .g-bob { animation: splash 0.7s ease-in-out; }
-.g-pet[data-gait="waddle"].is-happy .wing-near { transform-origin: 20% 30%; animation: flap 0.14s ease-in-out 4 alternate; }
+/* the duck's wing hinges at its shoulder (front, top of the wing), and lifts — it doesn't swing like a bird's */
+.g-pet[data-gait="waddle"].is-happy .wing-near { transform-origin: 76% 12%; animation: duck-flap 0.15s ease-in-out 4 alternate; }
+@keyframes duck-flap { from { transform: rotate(0deg); } to { transform: rotate(34deg); } }
 @keyframes greet-hop { 35% { transform: translateY(-34%) rotate(-8deg); } 70% { transform: translateY(0) scaleY(0.9); } }
 @keyframes kick { 35% { transform: rotate(40deg); } }
 @keyframes quack { 20% { transform: rotate(-10deg) translateY(-6%); } 45% { transform: rotate(9deg); } 70% { transform: rotate(-5deg) translateY(-3%); } }
