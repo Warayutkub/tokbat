@@ -71,7 +71,9 @@ GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ 
 
 ### แพ็กของใหม่ (เพิ่มของแต่ง/สีสัตว์โดยไม่ต้องออกแอปรุ่นใหม่)
 1. วาดและผ่านขั้นอนุมัติใน Figma ก่อน แล้วส่งออก: `python tools/garden/export.py --within <section id> --prefix "Prop/" --out <โฟลเดอร์>/props`
+   สัตว์สีใหม่: `--node <id ใน Figma>=cat-<สี> --out <โฟลเดอร์>/pets` (ลายปื้นของแมววาดด้วย `coat()` ใน `tools/garden/draw.py`)
 2. เขียน `<โฟลเดอร์>/pack.src.json` (ตัวอย่างอยู่หัวไฟล์ `tools/make_pack.py`) — รหัสต้องไม่ซ้ำของเดิม
+   ต้นฉบับของแต่ละแพ็กเก็บไว้ที่ `tools/packs/<id>/` (เช่น `tools/packs/cats-1/` แมวสามสี สลิดขาว สลิด วัว)
 3. `python tools/make_pack.py <โฟลเดอร์>` → ได้ `docs/packs/<id>/` (pack.json + pack.sig + ภาพ) และรายการใน `docs/packs/index.json`
 4. commit + push → หน้าเว็บอัปเดต → แอปเช็กวันละครั้งตอนต่อเน็ต (ถ้าเปิด "ของใหม่อัตโนมัติ") หรือกด "เช็กของใหม่ตอนนี้" ในตั้งค่า
 - แอปเก็บแพ็กไว้ที่ `packs\` ข้างไฟล์ข้อมูล และติดตั้งเฉพาะแพ็กที่ลายเซ็น ed25519 ตรง hash ของทุกไฟล์ตรง และภาพไม่มีสคริปต์หรือลิงก์ออกนอก (`src-tauri/src/packs.rs`, เทสต์ `tests/packs.rs`)

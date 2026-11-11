@@ -1,4 +1,13 @@
 {
  "format": 1,
- "packs": []
+ "packs": [
+  {
+   "id": "cats-1",
+   "version": 1,
+   "title": "แมวลายใหม่ 4 ลาย",
+   "url": "cats-1/pack.json",
+   "items": 0,
+   "pets": 4
+  }
+ ]
 }

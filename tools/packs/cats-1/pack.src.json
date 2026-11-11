@@ -1,0 +1,12 @@
+{
+  "id": "cats-1",
+  "version": 1,
+  "title": "แมวลายใหม่ 4 ลาย",
+  "items": [],
+  "pets": [
+    {"species": "cat", "color": "calico", "colorName": "สามสี", "file": "pets/cat-calico.svg"},
+    {"species": "cat", "color": "tabby-white", "colorName": "สลิดขาว", "file": "pets/cat-tabby-white.svg"},
+    {"species": "cat", "color": "tabby", "colorName": "สลิด", "file": "pets/cat-tabby.svg"},
+    {"species": "cat", "color": "cow", "colorName": "วัว", "file": "pets/cat-cow.svg"}
+  ]
+}

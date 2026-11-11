@@ -99,8 +99,8 @@ class Art:
         self.line = line
         self.k = k  # multiplier for explicit widths (1.0 = widths are already in final units)
 
-    def shape(self, pts, fill, jit=0.9, misreg=1.0, outline=True, wide=None, opacity=None, ink=INK):
-        """Filled shape + its pen outline (open path overlapping its start)."""
+    def shape(self, pts, fill, jit=0.9, misreg=1.0, outline=True, wide=None, opacity=None, ink=INK, inner=""):
+        """Filled shape + its pen outline (open path overlapping its start). `inner` goes between the two (coat patches)."""
         p = self.pen.jit(pts, jit)
         out = []
         if fill:
@@ -108,6 +108,7 @@ class Art:
             f = [(x + dx, y + dy) for x, y in p]
             op = f' fill-opacity="{opacity}"' if opacity is not None else ""
             out.append(f'<path id="fill" d="{cr(f, closed=True)}" fill="{fill}"{op}/>')
+        out.append(inner)
         if outline:
             # like the mascot: start anywhere, go all the way round, then run on a little past the start
             k = self.pen.r.randrange(len(p))
@@ -251,24 +252,95 @@ def dust(pts, op=0.55):
     return '<g id="dust">' + "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="{INK}" fill-opacity="{op}"/>' for x, y, r in pts) + "</g>"
 
 
+def cr_loop(pts, steps=8):
+    """Points along the closed Catmull-Rom curve cr(pts, closed=True) draws."""
+    n, out = len(pts), []
+    for i in range(n):
+        p0, p1, p2, p3 = pts[(i - 1) % n], pts[i], pts[(i + 1) % n], pts[(i + 2) % n]
+        c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
+        c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
+        for k in range(steps):
+            t = k / steps
+            u = 1 - t
+            out.append((u ** 3 * p1[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t ** 3 * p2[0],
+                        u ** 3 * p1[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t ** 3 * p2[1]))
+    return out
+
+
+def clip_convex(subject, clip):
+    """Sutherland–Hodgman: the part of polygon `subject` inside the convex polygon `clip`."""
+    area = sum(clip[i][0] * clip[(i + 1) % len(clip)][1] - clip[(i + 1) % len(clip)][0] * clip[i][1] for i in range(len(clip)))
+    sign = 1 if area > 0 else -1
+
+    def inside(p, a, b):
+        return sign * ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) >= 0
+
+    def cross(p, q, a, b):
+        dx1, dy1, dx2, dy2 = q[0] - p[0], q[1] - p[1], b[0] - a[0], b[1] - a[1]
+        den = dx1 * dy2 - dy1 * dx2 or 1e-9
+        t = ((a[0] - p[0]) * dy2 - (a[1] - p[1]) * dx2) / den
+        return (p[0] + t * dx1, p[1] + t * dy1)
+
+    out = subject
+    for i in range(len(clip)):
+        a, b = clip[i], clip[(i + 1) % len(clip)]
+        src, out = out, []
+        for j in range(len(src)):
+            p, q = src[j], src[(j + 1) % len(src)]
+            if inside(q, a, b):
+                if not inside(p, a, b):
+                    out.append(cross(p, q, a, b))
+                out.append(q)
+            elif inside(p, a, b):
+                out.append(cross(p, q, a, b))
+        if not out:
+            break
+    return out
+
+
+def coat(outline_pts, patches, grow=1.6):
+    """Flat coat patches (calico, cow, tabby saddle) kept inside a body part: each patch is a rough blob, cut to
+    the part's own curve pushed out a little so the pen outline drawn over it hides the cut edge."""
+    loop = cr_loop(outline_pts)
+    cx = sum(x for x, _ in loop) / len(loop)
+    cy = sum(y for _, y in loop) / len(loop)
+    big = []
+    for x, y in loop:
+        d = math.hypot(x - cx, y - cy) or 1.0
+        big.append((x + (x - cx) / d * grow, y + (y - cy) / d * grow))
+    out = []
+    for color, pts in patches:
+        poly = clip_convex(cr_loop(pts, 6), big)
+        if len(poly) > 2:
+            out.append(f'<path id="coat" d="M' + " L".join(f"{x:.1f} {y:.1f}" for x, y in poly) + f' Z" fill="{color}"/>')
+    return "".join(out)
+
+
+CAT_TORSO = [(60, 110), (80, 101), (108, 100), (132, 104), (146, 116), (145, 134), (128, 143), (98, 145), (68, 143), (54, 130)]
+CAT_HEAD = [(102, 72), (112, 52), (138, 46), (164, 50), (176, 70), (174, 94), (160, 108), (138, 112), (114, 108), (101, 92)]
+CAT_EAR_L, CAT_EAR_R = [(104, 66), (106, 30), (131, 52)], [(146, 50), (167, 28), (172, 66)]
+
+
 def cat(colors, seed=11):
-    """colors: body, stripe (or None), ear (inner)."""
+    """colors: body, stripe (or None), ear (inner); optional coat: torso / head patches [(colour, blob)],
+    ear-l / ear-r (ear colour), stripes / head_stripes (positions, to override the default three)."""
     a = pet_art(seed)
     B, S = colors["body"], colors.get("stripe")
     legs = sticks(a, [("leg-back-far", [(70, 132), (68, 160)]), ("leg-back-near", [(86, 134), (88, 162)]),
                       ("leg-front-far", [(118, 134), (116, 161)]), ("leg-front-near", [(134, 132), (137, 160)])])
     tail = a.group("tail", a.line_([(58, 120), (42, 108), (36, 88), (42, 72), (53, 70)], width=6.5, jit=0.5))
-    torso = [a.shape([(60, 110), (80, 101), (108, 100), (132, 104), (146, 116), (145, 134), (128, 143), (98, 145), (68, 143), (54, 130)], B, misreg=0)]
+    torso = [a.shape(CAT_TORSO, B, misreg=0, inner=coat(CAT_TORSO, colors.get("torso", [])))]
     if S:
-        torso += [a.line_([(x, 103), (x + 3, 116)], width=4, color=S, jit=0.4) for x in (80, 94, 108)]
+        torso += [a.line_(pts, width=4, color=S, jit=0.4) for pts in colors.get("stripes", [[(x, 103), (x + 3, 116)] for x in (80, 94, 108)])]
     inner = colors.get("ear", "#FFA8B8")
-    ears = [a.group("ear-l", a.shape([(104, 66), (106, 30), (131, 52)], B, jit=0.6, misreg=0),
+    ears = [a.group("ear-l", a.shape(CAT_EAR_L, colors.get("ear-l", B), jit=0.6, misreg=0),
                     a.shape([(110, 58), (111, 41), (124, 53)], inner, jit=0.3, misreg=0, outline=False)),
-            a.group("ear-r", a.shape([(146, 50), (167, 28), (172, 66)], B, jit=0.6, misreg=0),
+            a.group("ear-r", a.shape(CAT_EAR_R, colors.get("ear-r", B), jit=0.6, misreg=0),
                     a.shape([(152, 50), (164, 38), (166, 58)], inner, jit=0.3, misreg=0, outline=False))]
-    head = [a.shape([(102, 72), (112, 52), (138, 46), (164, 50), (176, 70), (174, 94), (160, 108), (138, 112), (114, 108), (101, 92)], B, misreg=0)]
+    head = [a.shape(CAT_HEAD, B, misreg=0, inner=coat(CAT_HEAD, colors.get("head", [])))]
     if S:
-        head += [a.line_(pts, width=3.6, color=S, jit=0.3) for pts in ([(129, 49), (131, 59)], [(140, 48), (140, 58)], [(151, 49), (149, 59)])]
+        head += [a.line_(pts, width=3.6, color=S, jit=0.3)
+                 for pts in colors.get("head_stripes", ([(129, 49), (131, 59)], [(140, 48), (140, 58)], [(151, 49), (149, 59)]))]
     face = [big_eyes(a, (124, 80, 11.8), (152, 78, 12.2), pupil=5.4), pink(a, [(110, 97), (166, 95)]),
             a.dot(139, 91, 2.6, INK),
             a.group("mouth", a.line_([(131, 96), (135, 100), (139, 96.5), (143, 100), (147, 96)], width=3.2, jit=0.25))]
@@ -326,6 +398,30 @@ CATS = {
     "ขาว": {"body": "#FFFFFF", "belly": None, "ear": "#FFC2CE"},
     "ดำ": {"body": "#474D60", "ear": "#FF9DB0"},
     "เทา": {"body": "#B9C0CC", "stripe": "#8E97A6", "belly": "#F4F6F9"},
+}
+# cat coats for the first pack (2027): patches and saddles, cut to the head/body by coat()
+DARK, ORANGE, TABBY, TABBY_LINE = "#474D60", "#F4A75B", "#A99B86", "#675D4F"
+CATS_COATS = {
+    "สามสี": {"id": "calico", "body": "#FFFFFF", "ear": "#FFC2CE", "ear-l": DARK, "ear-r": ORANGE,
+              "torso": [(DARK, [(48, 94), (80, 92), (96, 104), (94, 120), (80, 128), (62, 126), (48, 120)]),
+                        (ORANGE, [(92, 94), (122, 95), (130, 108), (118, 120), (100, 118), (90, 106)]),
+                        (ORANGE, [(46, 128), (62, 124), (72, 136), (64, 150), (48, 150)])],
+              "head": [(ORANGE, [(150, 38), (184, 42), (186, 80), (170, 80), (158, 66), (148, 56)]),
+                       (DARK, [(96, 40), (126, 38), (134, 56), (124, 70), (108, 76), (94, 70)])]},
+    "สลิดขาว": {"id": "tabby-white", "body": "#FFFFFF", "ear": "#FFC2CE", "stripe": TABBY_LINE, "ear-l": TABBY, "ear-r": TABBY,
+                "torso": [(TABBY, [(46, 90), (150, 90), (152, 118), (132, 121), (114, 118), (96, 124), (76, 121), (58, 126), (46, 124)])],
+                "stripes": [[(66, 104), (69, 117)], [(78, 102), (81, 116)], [(90, 102), (93, 116)], [(102, 102), (104, 114)]],
+                # tabby round the eyes, white muzzle, a narrow white blaze up between the eyes (like the reference cat)
+                "head": [(TABBY, [(94, 38), (186, 38), (186, 92), (166, 94), (152, 92), (143, 84), (141, 60), (137, 60), (134, 84),
+                                  (124, 94), (110, 95), (94, 92)])],
+                "head_stripes": [[(128, 48), (130, 57)], [(140, 47), (140, 54)], [(152, 48), (150, 57)]]},
+    "สลิด": {"id": "tabby", "body": "#B4A58E", "ear": "#FFA8B8", "stripe": TABBY_LINE,
+             "stripes": [[(64, 105), (67, 119)], [(76, 102), (79, 117)], [(88, 101), (91, 116)], [(100, 101), (102, 114)], [(58, 124), (64, 134)]],
+             "head_stripes": [[(129, 49), (131, 59)], [(140, 48), (140, 58)], [(151, 49), (149, 59)], [(104, 86), (111, 88)], [(173, 84), (166, 86)]]},
+    "วัว": {"id": "cow", "body": "#FFFFFF", "ear": "#FFC2CE", "ear-l": DARK,
+            "torso": [(DARK, [(68, 94), (106, 94), (110, 112), (98, 124), (80, 122), (66, 110)]),
+                      (DARK, [(44, 124), (60, 122), (68, 138), (58, 152), (44, 150)])],
+            "head": [(DARK, [(94, 38), (130, 36), (136, 58), (128, 72), (110, 78), (94, 72)])]},
 }
 DOGS = {
     "ทอง": {"body": "#E9BC72", "ear": "#C98E45", "muzzle": "#FFF3DE"},
