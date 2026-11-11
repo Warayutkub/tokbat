@@ -3,7 +3,7 @@
 import { call } from "../api.js";
 import { h, raw, button, chip, toast } from "../ui.js";
 import { itemSvg, CATS } from "./art.js";
-import { W, FEET_MIN, FEET_MAX, LAWN } from "./stage.js";
+import { W, FEET_MIN, FEET_MAX, LAWN, dims } from "./stage.js";
 
 const ICON_FLIP = '<svg class="ico ico--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M9 6L3 12l6 6z"/><path d="M15 6l6 6-6 6z"/></svg>';
 const ICON_STORE = '<svg class="ico ico--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 5h18v4H3zM10 13h4"/></svg>';
@@ -21,7 +21,10 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
     button("ยกเลิก", { small: true, onclick: () => exit(false) }),
     button("เสร็จ", { kind: "primary", small: true, onclick: () => exit(true) }));
   const top = h("div.g-hud", { style: { justifyContent: "flex-start" } }, banner);
+  const pct = h("span.g-tools__pct", {}, "100%");
   const tools = h("div.g-tools.sketch", { hidden: true },
+    h("button", { type: "button", title: "ย่อ", "aria-label": "ย่อ", onclick: () => resize(-1) }, "−"), pct,
+    h("button", { type: "button", title: "ขยาย", "aria-label": "ขยาย", onclick: () => resize(1) }, "+"),
     h("button", { type: "button", onclick: () => flip() }, raw(ICON_FLIP), "กลับด้าน"),
     h("button", { type: "button", onclick: () => store() }, raw(ICON_STORE), "เก็บเข้าถาด"));
   const tray = h("div.g-tray.sketch.sketch--card");
@@ -102,6 +105,7 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
     selected = it;
     if (!it) { tools.hidden = true; return; }
     it.el.classList.add("is-selected");
+    pct.textContent = `${Math.round((it.row.scale || 1) * 100)}%`;
     placeTools();
   }
 
@@ -130,7 +134,7 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
       moved = true;
       el.classList.add("is-dragging");
       tools.hidden = true;
-      Object.assign(it.row, clampPos(it.def, from.x + p.x - start.x, from.y + p.y - start.y));
+      Object.assign(it.row, clampPos(dims(it), from.x + p.x - start.x, from.y + p.y - start.y));
       stage.place(it);
     };
     const up = () => {
@@ -148,6 +152,22 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
     el.addEventListener("pointerup", up);
   }
   stage.el.addEventListener("pointerdown", onDown);
+
+  // 50%–200% in steps of 10%; the item keeps standing on the same spot (bottom centre)
+  function resize(dir) {
+    if (!selected) return;
+    const row = selected.row, d = selected.def, k0 = row.scale || 1;
+    const k = Math.round(Math.min(2, Math.max(0.5, k0 + dir * 0.1)) * 10) / 10;
+    if (k === k0) return;
+    row.x += (d.w * k0 - d.w * k) / 2;
+    row.y += d.h * k0 - d.h * k;
+    row.scale = k;
+    Object.assign(live.get(row.id), { x: row.x, y: row.y, scale: k });
+    changed.add(row.id);
+    stage.place(selected);
+    pct.textContent = `${Math.round(k * 100)}%`;
+    placeTools();
+  }
 
   function flip() {
     if (!selected) return;
@@ -170,6 +190,8 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
   const onKey = (e) => {
     if (e.key === "Escape") select(null);
     if ((e.key === "Delete" || e.key === "Backspace") && selected && !e.target.closest("input")) store();
+    if ((e.key === "+" || e.key === "=") && selected) resize(1);
+    if (e.key === "-" && selected) resize(-1);
   };
   window.addEventListener("keydown", onKey);
   const onResize = () => placeTools();
@@ -188,7 +210,7 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
 
   async function exit(save) {
     if (save && changed.size) {
-      const list = [...changed].map((id) => live.get(id)).map((r) => ({ id: r.id, x: r.x, y: r.y, flip: !!r.flip }));
+      const list = [...changed].map((id) => live.get(id)).map((r) => ({ id: r.id, x: r.x, y: r.y, flip: !!r.flip, scale: r.scale || 1 }));
       const r = await call("decor_save", list);
       if (!r.ok) return toast("บันทึกการจัดลานไม่สำเร็จ", { error: true });
     }

@@ -15,6 +15,11 @@ export const LAWN = { x0: -W / 2, x1: W + W / 2 };
 const PET = { w: 180, h: 162 };
 const DEFAULT_KIND = { gait: "walk", size: 1, speed: 50, rain: "shelter", water: "none" };
 const rand = (a, b) => a + Math.random() * (b - a);
+/** An item's drawing at the size it was given in the garden (decorate › ย่อ / ขยาย). */
+export const dims = (it) => {
+  const k = it.row.scale || 1, d = it.def;
+  return k === 1 ? d : { ...d, w: d.w * k, h: d.h * k, light: d.light && [d.light[0] * k, d.light[1] * k] };
+};
 const div = (cls, style) => { const e = document.createElement("div"); e.className = cls; if (style) Object.assign(e.style, style); return e; };
 
 // where a pet stands when it uses something (fractions of the item box, dy in px past its bottom)
@@ -111,7 +116,7 @@ export class Stage {
       for (const it of this.items.values()) {
         const c = CANOPY[it.def.id];
         if (!c) continue;
-        const [fx, fy, rx, ry] = c.dry, d = it.def, r = it.row;
+        const [fx, fy, rx, ry] = c.dry, d = dims(it), r = it.row;
         const cx = this.ox + (r.x + (r.flip ? 1 - fx : fx) * d.w) * this.s;
         const cy = this.oy + (r.y + fy * d.h) * this.s;
         zones.push(`radial-gradient(${(rx * d.w * this.s).toFixed(1)}px ${(ry * d.h * this.s).toFixed(1)}px at ${cx.toFixed(1)}px ${cy.toFixed(1)}px, transparent 58%, #000 100%)`);
@@ -196,7 +201,7 @@ export class Stage {
   }
 
   place(it) {
-    const { row, def: d, el } = it;
+    const { row, el } = it, d = dims(it);
     Object.assign(el.style, { left: `${row.x}px`, top: `${row.y}px`, width: `${d.w}px`, height: `${d.h}px`, zIndex: d.ground ? 1 : 10 + Math.round(row.y + d.h) });
     el.classList.toggle("is-flipped", !!row.flip);
     if (it.glow) {
@@ -231,7 +236,7 @@ export class Stage {
   spots(kind, species) {
     const out = [];
     for (const it of this.items.values()) {
-      const d = it.def, r = it.row;
+      const d = dims(it), r = it.row;
       const mine = d.bed?.includes(species);
       if ((kind === "home" && mine && d.shelter) || (kind === "bed" && mine && !d.shelter)) {
         const [fx, fy, dy] = BED_SPOT[d.id] || [0.5, 1, 6];
@@ -252,9 +257,10 @@ export class Stage {
   perches() {
     const out = [];
     for (const it of this.items.values()) {
-      const d = it.def, r = it.row;
+      const d = dims(it), r = it.row;
+      // y = the top of the drawing there (measured from the art); +6 so the feet stand on the line, not above it
       (d.perch || []).forEach(([fx, fy], i) => out.push({
-        key: `${r.id}:${i}`, x: r.x + (r.flip ? 1 - fx : fx) * d.w, y: r.y + fy * d.h,
+        key: `${r.id}:${i}`, x: r.x + (r.flip ? 1 - fx : fx) * d.w, y: r.y + fy * d.h + 6,
         z: 11 + Math.round(r.y + d.h), cover: fy > 0.3 && !!CANOPY[d.id],
       }));
     }
@@ -267,13 +273,18 @@ export class Stage {
     for (const it of this.items.values()) {
       const w = it.def.water;
       if (!w) continue;
-      const d = it.def, r = it.row;
+      const d = dims(it), r = it.row;
       out.push({ cx: r.x + (r.flip ? 1 - w[0] : w[0]) * d.w, cy: r.y + w[1] * d.h, rx: w[2] * d.w, ry: w[3] * d.h });
     }
     return out;
   }
 
   inWater(x, y) { return this.waters().some((w) => ((x - w.cx) / w.rx) ** 2 + ((y - w.cy) / w.ry) ** 2 < 1); }
+
+  /** Where a swimmer can be: the front of the water, so its waterline (just above its feet) lands on the water and
+   * not on the grass behind the pond. */
+  swimZones() { return this.waters().map((w) => ({ cx: w.cx, cy: w.cy + w.ry * 0.3, rx: w.rx * 0.55, ry: w.ry * 0.55 })); }
+  inSwim(x, y) { return this.swimZones().some((w) => ((x - w.cx) / w.rx) ** 2 + ((y - w.cy) / w.ry) ** 2 < 1); }
 
   /** A point at `k` times the water's radius (below 1 inside, above 1 round the edge), on the lawn. Outside the water
    * it keeps to the sides and the front: an animal standing behind a pond would look as if it sat on the water. */
@@ -387,7 +398,7 @@ class PetActor {
     this.bob.style.translate = this.lift ? `0 ${(-this.lift).toFixed(1)}px` : "";
     this.el.classList.toggle("is-left", this.face < 0);
     this.el.classList.toggle("is-perched", !!this.perch);
-    const swim = this.kind.water === "swim" && !this.move && this.stage.inWater(this.x, this.y);
+    const swim = this.kind.water === "swim" && !this.move && this.stage.inSwim(this.x, this.y);
     this.el.classList.toggle("is-swimming", swim);
   }
 
@@ -407,7 +418,8 @@ class PetActor {
       const edge = k.water !== "none" && water.length ? st.waterPoint(water[0], 1.35) : null;
       this.goal = home ? { ...home, then: "home" } : bed ? { ...bed, then: "sleep" } : edge ? { ...edge, then: "sleep" } : { ...here, then: "sleep" };
     } else if (k.water === "swim" && water.length && Math.random() < (rain ? 0.8 : 0.5)) {
-      this.goal = { ...st.waterPoint(water[Math.floor(Math.random() * water.length)], rand(0.1, 0.75)), then: "idle" };
+      const zones = st.swimZones();
+      this.goal = { ...st.waterPoint(zones[Math.floor(Math.random() * zones.length)], rand(0.1, 0.9)), then: "idle" };
     } else if (k.water === "near" && water.length && Math.random() < 0.6) {
       this.goal = { ...st.waterPoint(water[Math.floor(Math.random() * water.length)], rand(1.3, 1.7)), then: "idle" };
     } else if (Math.random() < (rain ? 0.85 : 0.7)) {

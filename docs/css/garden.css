@@ -115,6 +115,18 @@
 .g-wake { position: absolute; left: 22%; right: 22%; bottom: 22%; height: 14%; border: 2px solid #D3F0FD; border-radius: 50%; opacity: 0; pointer-events: none; }
 .g-pet.is-swimming .g-wake { opacity: 1; animation: wake 2.2s ease-out infinite; }
 @keyframes wake { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.35); opacity: 0; } }
+/* a click says hello in each animal's own way (these win over the walking / swimming loops while they play) */
+.g-pet[data-gait="hop"].is-happy .g-bob { animation: greet-hop 0.62s var(--ease-out); }
+.g-pet[data-gait="hop"].is-happy :is(.leg-back-near, .leg-back-far) { animation: kick 0.62s var(--ease-out); }
+.g-pet[data-gait="fly"].is-happy .g-bob { animation: hop 0.7s var(--ease-out); }
+.g-pet[data-gait="fly"].is-happy .wing-far { animation: flap-far 0.16s ease-in-out 4 alternate; }
+.g-pet[data-gait="waddle"].is-happy .g-bob, .g-pet[data-gait="waddle"].is-walking.is-happy .g-bob { animation: quack 0.7s ease-in-out; }
+.g-pet[data-gait="waddle"].is-swimming.is-happy .g-bob { animation: splash 0.7s ease-in-out; }
+.g-pet[data-gait="waddle"].is-happy .wing-near { transform-origin: 20% 30%; animation: flap 0.14s ease-in-out 4 alternate; }
+@keyframes greet-hop { 35% { transform: translateY(-34%) rotate(-8deg); } 70% { transform: translateY(0) scaleY(0.9); } }
+@keyframes kick { 35% { transform: rotate(40deg); } }
+@keyframes quack { 20% { transform: rotate(-10deg) translateY(-6%); } 45% { transform: rotate(9deg); } 70% { transform: rotate(-5deg) translateY(-3%); } }
+@keyframes splash { 30% { transform: translateY(2%) rotate(-6deg); } 60% { transform: translateY(16%) rotate(5deg); } }
 
 /* the tint and the rain lie over everything but never catch the mouse */
 .g-night, .g-rain, .g-rain * { pointer-events: none; }

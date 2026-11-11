@@ -76,6 +76,10 @@ const MIGRATIONS: &[&str] = &[
     INSERT INTO coin_ledger (delta, kind, ref)
         SELECT (-delta) / 2, 'refund', 'price-0.3.1 ' || kind || ' ' || ref FROM coin_ledger WHERE kind IN ('buy', 'adopt') AND delta < 0;
     "#,
+    // 4 — 0.4.1: things in the garden can be made smaller or bigger (decorate › ย่อ / ขยาย)
+    r#"
+    ALTER TABLE owned_items ADD COLUMN scale REAL NOT NULL DEFAULT 1;
+    "#,
 ];
 
 pub fn connect(path: &Path) -> rusqlite::Result<Connection> {

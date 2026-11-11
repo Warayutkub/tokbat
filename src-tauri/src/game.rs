@@ -358,18 +358,18 @@ pub fn rename_pet(con: &Connection, id: i64, name: &str) -> Value {
 }
 
 pub fn items(con: &Connection) -> Vec<Value> {
-    con.prepare("SELECT id, item_id, x, y, flip, got_from FROM owned_items ORDER BY id")
+    con.prepare("SELECT id, item_id, x, y, flip, got_from, scale FROM owned_items ORDER BY id")
         .and_then(|mut s| {
             s.query_map([], |r| {
                 Ok(json!({"id": r.get::<_, i64>(0)?, "item": r.get::<_, String>(1)?, "x": r.get::<_, Option<f64>>(2)?, "y": r.get::<_, Option<f64>>(3)?,
-                          "flip": r.get::<_, i64>(4)? != 0, "from": r.get::<_, String>(5)?}))
+                          "flip": r.get::<_, i64>(4)? != 0, "from": r.get::<_, String>(5)?, "scale": r.get::<_, f64>(6)?}))
             })
             .map(|r| r.filter_map(Result::ok).collect())
         })
         .unwrap_or_default()
 }
 
-/// Decorating ends with one save: [{id, x, y, flip}] — x/y null puts the piece back in the tray.
+/// Decorating ends with one save: [{id, x, y, flip, scale}] — x/y null puts the piece back in the tray; scale 0.5–2.
 pub fn save_decor(con: &Connection, changes: &Value) -> Value {
     let world = &manifest()["world"];
     let (w, h) = (world["w"].as_f64().unwrap_or(1280.0), world["h"].as_f64().unwrap_or(800.0));
@@ -379,7 +379,8 @@ pub fn save_decor(con: &Connection, changes: &Value) -> Value {
         // the lawn runs half a scene past each side of the drawn scene (web/js/garden/stage.js LAWN)
         let (x, y) = (c["x"].as_f64().map(|v| v.clamp(-w / 2.0 - 200.0, w * 1.5)), c["y"].as_f64().map(|v| v.clamp(-200.0, h)));
         let (x, y) = if x.is_some() && y.is_some() { (x, y) } else { (None, None) };
-        n += con.execute("UPDATE owned_items SET x = ?1, y = ?2, flip = ?3 WHERE id = ?4", params![x, y, i64::from(c["flip"] == true), id]).unwrap_or(0);
+        let scale = c["scale"].as_f64().unwrap_or(1.0).clamp(0.5, 2.0);
+        n += con.execute("UPDATE owned_items SET x = ?1, y = ?2, flip = ?3, scale = ?4 WHERE id = ?5", params![x, y, i64::from(c["flip"] == true), scale, id]).unwrap_or(0);
     }
     json!({"ok": true, "saved": n})
 }

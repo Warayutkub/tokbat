@@ -258,7 +258,7 @@ fn upgrading_marks_existing_sessions_as_legacy() {
          PRAGMA user_version = 1;",
     )
     .unwrap();
-    assert_eq!(db::migrate(&con).unwrap(), 3);
+    assert_eq!(db::migrate(&con).unwrap(), 4);
     let source: String = con.query_row("SELECT source FROM sessions", [], |r| r.get(0)).unwrap();
     assert_eq!(source, "legacy");
     con.execute("INSERT INTO sessions (work_date, start_min, end_min) VALUES ('2026-11-02', 540, 600)", []).unwrap();
@@ -272,13 +272,14 @@ fn halving_prices_refunds_what_was_bought_before() {
     con.execute_batch(
         "INSERT INTO coin_ledger (delta, kind, ref) VALUES (150, 'welcome', 'welcome'), (-120, 'adopt', 'cat-orange'),
             (-25, 'buy', 'bench'), (-5, 'buy', 'grass-tuft'), (10, 'quest', '2026-11-01 use_timer'), (30, 'gift', 'all-owned');
+         ALTER TABLE owned_items DROP COLUMN scale; -- back to the 0.3.0 schema
          PRAGMA user_version = 2;",
     )
     .unwrap();
-    assert_eq!(db::migrate(&con).unwrap(), 3);
+    assert_eq!(db::migrate(&con).unwrap(), 4);
     let (n, sum): (i64, i64) = con.query_row("SELECT COUNT(*), SUM(delta) FROM coin_ledger WHERE kind = 'refund'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
     assert_eq!((n, sum), (3, 60 + 12 + 2)); // the new price is half, rounded up: 120 → 60, 25 → 13, 5 → 3
-    assert_eq!(db::migrate(&con).unwrap(), 3); // once only
+    assert_eq!(db::migrate(&con).unwrap(), 4); // once only
     let again: i64 = con.query_row("SELECT COUNT(*) FROM coin_ledger WHERE kind = 'refund'", [], |r| r.get(0)).unwrap();
     assert_eq!(again, 3);
     assert_eq!(game::PET_PRICE, 60);
@@ -314,5 +315,18 @@ fn things_can_stand_out_on_the_wide_lawn() {
     let items = t.state()["items"].clone();
     let it = items.as_array().unwrap().iter().find(|i| i["id"] == id).unwrap();
     assert_eq!(it["x"], -840.0, "kept on the lawn");
+}
+
+#[test]
+fn things_keep_the_size_they_were_given() {
+    let t = api();
+    t.state();
+    let id = t.call("shop_buy", json!(["bench"]))["id"].as_i64().unwrap();
+    let find = |t: &T| t.state()["items"].as_array().unwrap().iter().find(|i| i["id"] == id).cloned().unwrap();
+    assert_eq!(find(&t)["scale"], 1.0);
+    t.call("decor_save", json!([[{"id": id, "x": 500.0, "y": 600.0, "flip": false, "scale": 1.4}]]));
+    assert_eq!(find(&t)["scale"], 1.4);
+    t.call("decor_save", json!([[{"id": id, "x": 500.0, "y": 600.0, "flip": false, "scale": 9.0}]]));
+    assert_eq!(find(&t)["scale"], 2.0, "at most twice");
 }
 
