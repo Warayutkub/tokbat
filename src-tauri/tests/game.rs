@@ -159,18 +159,21 @@ fn buying_needs_enough_coins_and_a_shortened_day_can_go_negative() {
     t.state();
     let r = t.call("shop_buy", json!(["dog-house"]));
     assert_eq!(r["ok"], true);
-    assert_eq!(t.balance(), game::WELCOME_COINS - 100);
+    assert_eq!(t.balance(), game::WELCOME_COINS - 50);
+    t.call("shop_buy", json!(["rabbit-hutch"]));
+    t.call("shop_buy", json!(["cat-tower"]));
+    assert_eq!(t.balance(), 5);
     let r = t.call("shop_buy", json!(["coconut"]));
-    assert_eq!(r["error"]["code"], "coins", "50 left, coconut is 70");
+    assert_eq!(r["error"]["code"], "coins", "5 left, coconut is 35");
     assert_eq!(t.call("shop_buy", json!(["nope"]))["error"]["code"], "no_item");
     // earn, spend, then shorten the day: the balance follows the hours
     let s = t.call("save_session", json!([{"date": "2026-11-10", "start": "00:00", "end": "08:00", "break_min": 0, "note": ""}]));
-    assert_eq!(t.balance(), 50 + 16);
-    t.call("shop_buy", json!(["tree-pink"]));
-    assert_eq!(t.balance(), 6);
+    assert_eq!(t.balance(), 5 + 16);
+    t.call("shop_buy", json!(["mailbox"]));
+    assert_eq!(t.balance(), 3);
     let id = s["session"]["id"].as_i64().unwrap();
     t.call("save_session", json!([{"id": id, "date": "2026-11-10", "start": "00:00", "end": "01:00", "break_min": 0, "note": ""}]));
-    assert_eq!(t.balance(), 6 - 14);
+    assert_eq!(t.balance(), 3 - 14);
     assert_eq!(t.call("shop_buy", json!(["ball"]))["error"]["code"], "coins");
 }
 
@@ -184,7 +187,8 @@ fn adopting_checks_the_pet_the_name_and_the_price() {
     let r = t.call("pet_adopt", json!([{"species": "cat", "color": "orange", "name": "ส้มจี๊ด"}]));
     assert_eq!(r["pet"]["name"], "ส้มจี๊ด");
     assert_eq!(t.balance(), game::WELCOME_COINS - game::PET_PRICE);
-    assert_eq!(t.call("pet_adopt", json!([{"species": "dog", "color": "gold", "name": "ทองดี"}]))["error"]["code"], "coins");
+    assert_eq!(t.call("pet_adopt", json!([{"species": "dog", "color": "gold", "name": "ทองดี"}]))["pet"]["name"], "ทองดี");
+    assert_eq!(t.call("pet_adopt", json!([{"species": "rabbit", "color": "white", "name": "ปุย"}]))["error"]["code"], "coins", "30 left, a pet is 60");
     let pid = r["pet"]["id"].as_i64().unwrap();
     assert_eq!(t.call("pet_rename", json!([pid, "จี๊ด"]))["pet"]["name"], "จี๊ด");
     // the special quest notices
@@ -254,10 +258,28 @@ fn upgrading_marks_existing_sessions_as_legacy() {
          PRAGMA user_version = 1;",
     )
     .unwrap();
-    assert_eq!(db::migrate(&con).unwrap(), 2);
+    assert_eq!(db::migrate(&con).unwrap(), 3);
     let source: String = con.query_row("SELECT source FROM sessions", [], |r| r.get(0)).unwrap();
     assert_eq!(source, "legacy");
     con.execute("INSERT INTO sessions (work_date, start_min, end_min) VALUES ('2026-11-02', 540, 600)", []).unwrap();
     let fresh: String = con.query_row("SELECT source FROM sessions WHERE work_date = '2026-11-02'", [], |r| r.get(0)).unwrap();
     assert_eq!(fresh, "manual");
+}
+
+#[test]
+fn halving_prices_refunds_what_was_bought_before() {
+    let con = mem();
+    con.execute_batch(
+        "INSERT INTO coin_ledger (delta, kind, ref) VALUES (150, 'welcome', 'welcome'), (-120, 'adopt', 'cat-orange'),
+            (-25, 'buy', 'bench'), (-5, 'buy', 'grass-tuft'), (10, 'quest', '2026-11-01 use_timer'), (30, 'gift', 'all-owned');
+         PRAGMA user_version = 2;",
+    )
+    .unwrap();
+    assert_eq!(db::migrate(&con).unwrap(), 3);
+    let (n, sum): (i64, i64) = con.query_row("SELECT COUNT(*), SUM(delta) FROM coin_ledger WHERE kind = 'refund'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+    assert_eq!((n, sum), (3, 60 + 12 + 2)); // the new price is half, rounded up: 120 → 60, 25 → 13, 5 → 3
+    assert_eq!(db::migrate(&con).unwrap(), 3); // once only
+    let again: i64 = con.query_row("SELECT COUNT(*) FROM coin_ledger WHERE kind = 'refund'", [], |r| r.get(0)).unwrap();
+    assert_eq!(again, 3);
+    assert_eq!(game::PET_PRICE, 60);
 }

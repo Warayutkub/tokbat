@@ -19,13 +19,13 @@ use crate::timecalc as tc;
 pub const MANIFEST_JSON: &str = include_str!("../../web/garden/base/manifest.json");
 pub const RATE_PER_HOUR: i64 = 2;
 pub const WELCOME_COINS: i64 = 150;
-pub const PET_PRICE: i64 = 120;
+pub const PET_PRICE: i64 = 60;
 pub const BACKFILL_DAYS: i64 = 7;
 pub const NAME_MAX: usize = 12;
 /// Gift box odds, shown to the player as they are.
 pub const ODDS: [(&str, u32); 3] = [("common", 70), ("rare", 25), ("special", 5)];
 /// Coins instead of an item once every item of the box is already owned.
-pub const GIFT_FALLBACK_COINS: i64 = 30;
+pub const GIFT_FALLBACK_COINS: i64 = 15;
 
 pub fn manifest() -> &'static Value {
     static M: OnceLock<Value> = OnceLock::new();

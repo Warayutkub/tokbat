@@ -70,6 +70,12 @@ const MIGRATIONS: &[&str] = &[
         adopted_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
     "#,
+    // 3 — 0.3.1 halved the prices (pets 120 → 60, decorations to half, rounded up): give back the difference on
+    // everything bought before, so nobody pays more for having started early
+    r#"
+    INSERT INTO coin_ledger (delta, kind, ref)
+        SELECT (-delta) / 2, 'refund', 'price-0.3.1 ' || kind || ' ' || ref FROM coin_ledger WHERE kind IN ('buy', 'adopt') AND delta < 0;
+    "#,
 ];
 
 pub fn connect(path: &Path) -> rusqlite::Result<Connection> {
