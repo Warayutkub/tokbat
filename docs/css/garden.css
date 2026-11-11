@@ -8,6 +8,7 @@
 .g-stage.is-night { background: #1D2B4F; }
 .g-stage.is-night.is-rain { background: #232E47; }
 .g-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.g-world.is-sliding { transition: transform 360ms var(--ease-out); }
 .g-bg, .g-layer, .g-fx { position: absolute; inset: 0; }
 .g-bg__set { position: absolute; inset: 0; }
 .g-bg__img { position: absolute; top: 0; width: 1282px; height: 800px; user-select: none; -webkit-user-drag: none; }

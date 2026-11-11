@@ -180,7 +180,9 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("resize", onResize);
     select(null);
+    trayRo.disconnect();
     top.remove(); tools.remove(); tray.remove();
+    stage.setInset(0);
     stage.setDecor(false);
   }
 
@@ -195,6 +197,13 @@ export function startDecorate({ card, stage, m, rows, onExit }) {
     onExit(save && changed.size > 0);
   }
 
+  // the garden moves up above the tray, so things at the front of the lawn stay in reach
+  const trayRo = new ResizeObserver(() => {
+    const c = card.getBoundingClientRect(), t = tray.getBoundingClientRect();
+    if (t.height) stage.setInset(c.bottom - t.top + 6);
+    setTimeout(placeTools, 400); // after the slide
+  });
+  trayRo.observe(tray);
   paintTray();
   return { abort: () => cleanup() };
 }

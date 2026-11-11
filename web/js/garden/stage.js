@@ -76,12 +76,26 @@ export class Stage {
   fit() {
     const r = this.host.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    // from the height only: wider windows get more grass on the sides (mirrored), taller ones more sky
-    this.s = Math.min(1.2, Math.max(0.45, (r.height / H) * this.zoom * 1.12));
+    // from the height only: wider windows get more grass on the sides (mirrored), taller ones more sky.
+    // `inset` is room kept free at the bottom (the decorate tray), so nothing on the grass hides behind it.
+    const h = Math.max(120, r.height - (this.inset || 0));
+    this.s = Math.min(1.2, Math.max(0.45, (h / H) * this.zoom * 1.12));
     this.ox = (r.width - W * this.s) / 2;
-    this.oy = r.height - H * this.s;
+    this.oy = h - H * this.s;
     this.world.style.transform = `translate(${this.ox}px, ${this.oy}px) scale(${this.s})`;
     if (this.items) this.updateDry();
+  }
+
+  /** Keep `px` free at the bottom of the box (0 = none); the garden slides up or back down. */
+  setInset(px) {
+    px = Math.max(0, Math.round(px));
+    if (px === (this.inset || 0)) return;
+    this.inset = px;
+    this.world.classList.add("is-sliding");
+    clearTimeout(this.slideT);
+    this.slideT = setTimeout(() => this.world.classList.remove("is-sliding"), 400);
+    this.fit();
+    this.retarget();
   }
 
   /** Holes in the rain under every tree and big leaf, so a pet standing there is visibly out of the rain. */
